@@ -9,9 +9,9 @@ serde_json = "1.0"
 ipnet = "2"
 regex = "1"
 serde_yaml = "0.9"
-windows_firewall = "0.1.5"
-optional-field = "0.1.6"
 tempfile = "3"
+clap = { version = "4", features = ["derive"] }
+rayon = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows_firewall = "0.1"

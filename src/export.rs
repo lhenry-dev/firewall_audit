@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -35,7 +36,7 @@ fn parse_audit_blocks(audit_output: &str) -> Vec<AuditBlock> {
         no_match: false,
     };
     for line in audit_output.lines() {
-        if line.starts_with("Règle d'audit: ") {
+        if let Some(rest) = line.strip_prefix("Audit Rule: ") {
             if !current.id.is_empty() {
                 blocks.push(current);
                 current = AuditBlock {
@@ -46,14 +47,14 @@ fn parse_audit_blocks(audit_output: &str) -> Vec<AuditBlock> {
                     no_match: false,
                 };
             }
-            current.id = line[15..].trim().to_string();
+            current.id = rest.trim().to_string();
         } else if let Some(desc) = line.strip_prefix("Description: ") {
             current.description = desc.trim().to_string();
-        } else if let Some(sev) = line.strip_prefix("Sévérité: ") {
+        } else if let Some(sev) = line.strip_prefix("Severity: ") {
             current.severity = sev.trim().to_string();
         } else if line.trim_start().starts_with("- ") {
             current.matches.push(line.trim_start()[2..].to_string());
-        } else if line.contains("Aucune règle du firewall ne correspond") {
+        } else if line.contains("no firewall rule matches") {
             current.no_match = true;
         }
     }
@@ -82,7 +83,7 @@ fn count_by_severity<'a, I: Iterator<Item = &'a AuditBlock>>(
     (high, medium, low, info)
 }
 
-/// Exporte le résultat d'audit (String) au format CSV dans un fichier ou retourne le CSV sous forme de String
+/// Export the audit result (String) to CSV format in a file or return the CSV as a String
 pub fn export_csv(audit_output: &str, path: Option<&str>) -> io::Result<String> {
     let mut blocks = parse_audit_blocks(audit_output);
     blocks.sort_by_key(|b| std::cmp::Reverse(severity_order(&b.severity)));
@@ -115,7 +116,7 @@ pub fn export_csv(audit_output: &str, path: Option<&str>) -> io::Result<String> 
     Ok(csv)
 }
 
-/// Exporte le résultat d'audit (String) au format HTML dans un fichier ou retourne le HTML sous forme de String
+/// Export the audit result (String) to HTML format in a file or return the HTML as a String
 pub fn export_html(audit_output: &str, path: Option<&str>) -> io::Result<String> {
     let mut blocks = parse_audit_blocks(audit_output);
     blocks.sort_by_key(|b| std::cmp::Reverse(severity_order(&b.severity)));
@@ -148,7 +149,7 @@ pub fn export_html(audit_output: &str, path: Option<&str>) -> io::Result<String>
     let total = high + medium + low + info;
     if total > 0 {
         html.push_str(&format!(
-            "<div class='synth'>{} problème(s) détecté(s) : <span class='sev-high-txt'>{} critique(s)</span>, <span class='sev-medium-txt'>{} important(s)</span>, <span class='sev-low-txt'>{} mineur(s)</span>, <span class='sev-info-txt'>{} informatif(s)</span>.</div>",
+            "<div class='synth'>{} problem(s) detected : <span class='sev-high-txt'>{} critical(s)</span>, <span class='sev-medium-txt'>{} important(s)</span>, <span class='sev-low-txt'>{} minor(s)</span>, <span class='sev-info-txt'>{} informational(s)</span>.</div>",
             total, high, medium, low, info
         ));
     }
@@ -198,7 +199,7 @@ pub fn append_console_explanation(audit_output: &str) -> String {
     out.push('\n');
     if total > 0 {
         out.push_str(&format!(
-            "{} problème(s) détecté(s) : {} critique(s), {} important(s), {} mineur(s), {} informatif(s).\n",
+            "{} problem(s) detected : {} critical(s), {} important(s), {} minor(s), {} informational(s).\n",
             total, high, medium, low, info
         ));
     } else {
@@ -207,40 +208,99 @@ pub fn append_console_explanation(audit_output: &str) -> String {
     out
 }
 
+#[derive(Serialize)]
+pub struct JsonAuditBlock {
+    pub id: String,
+    pub description: String,
+    pub severity: String,
+    pub matches: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct JsonAuditSummary {
+    pub high: usize,
+    pub medium: usize,
+    pub low: usize,
+    pub info: usize,
+    pub total: usize,
+}
+
+#[derive(Serialize)]
+pub struct JsonAuditResult {
+    pub summary: JsonAuditSummary,
+    pub results: Vec<JsonAuditBlock>,
+}
+
+pub fn export_json(audit_output: &str, path: Option<&str>) -> std::io::Result<String> {
+    let blocks = parse_audit_blocks(audit_output);
+    let filtered: Vec<_> = blocks
+        .into_iter()
+        .filter(|b| !b.no_match && !b.matches.is_empty())
+        .collect();
+    let (high, medium, low, info) = count_by_severity(filtered.iter());
+    let total = high + medium + low + info;
+    let json_blocks: Vec<JsonAuditBlock> = filtered
+        .into_iter()
+        .map(|b| JsonAuditBlock {
+            id: b.id,
+            description: b.description,
+            severity: b.severity,
+            matches: b.matches,
+        })
+        .collect();
+    let summary = JsonAuditSummary {
+        high,
+        medium,
+        low,
+        info,
+        total,
+    };
+    let result = JsonAuditResult {
+        summary,
+        results: json_blocks,
+    };
+    let json = serde_json::to_string_pretty(&result).unwrap();
+    if let Some(path) = path {
+        let mut file = File::create(path)?;
+        file.write_all(json.as_bytes())?;
+    }
+    Ok(json)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const AUDIT_SAMPLE: &str = r#"
-Règle d'audit: test-high
-Description: Critique
-Sévérité: high
-  ✅ 2 correspondance(s) trouvée(s):
+Audit Rule: test-high
+Description: Critical
+Severity: high
+  ✅ 2 match(es) found:
     - Rule1
     - Rule2
-Règle d'audit: test-info
+Audit Rule: test-info
 Description: Info
-Sévérité: info
-  ✅ 1 correspondance(s) trouvée(s):
+Severity: info
+  ✅ 1 match(es) found:
     - Rule3
-Règle d'audit: test-nomatch
-Description: Pas de match
-Sévérité: low
-  ❌ Aucune règle du firewall ne correspond à cette règle d'audit
---- Fin de l'audit ---
+Audit Rule: test-nomatch
+Description: No match
+Severity: low
+  ❌ no firewall rule matches this audit rule
+--- Audit End ---
 "#;
 
     #[test]
     fn test_export_csv_format() {
         let csv = export_csv(AUDIT_SAMPLE, None).unwrap();
-        // Doit contenir l'en-tête et deux lignes (pas la règle sans match)
+        // Should contain the header and two lines (not the no-match rule)
         let lines: Vec<_> = csv.lines().collect();
         assert_eq!(lines[0], "regle_id,description,severite,match");
-        assert!(lines[1].contains(",Critique,high,"));
+        assert!(lines[1].contains(",Critical,high,"));
         assert!(lines[2].contains(",Info,info,"));
         assert_eq!(lines.len(), 3); // header + 2
-        // Vérifie l'échappement CSV si besoin
-        let csv2 = export_csv("Règle d'audit: test\nDescription: a,b\nSévérité: high\n  ✅ 1 correspondance(s) trouvée(s):\n    - Rule1,Rule2\n--- Fin de l'audit ---\n", None).unwrap();
+        // Check CSV escaping if needed
+        let csv2 = export_csv("Audit Rule: test\nDescription: a,b\nSeverity: high\n  ✅ 1 match(es) found:\n    - Rule1,Rule2\n--- Audit End ---\n", None).unwrap();
         assert!(csv2.contains("\"a,b\""));
         assert!(csv2.contains("\"Rule1,Rule2\""));
     }
@@ -248,12 +308,12 @@ Sévérité: low
     #[test]
     fn test_export_html_format() {
         let html = export_html(AUDIT_SAMPLE, None).unwrap();
-        // Doit contenir la phrase de synthèse, les deux règles avec correspondance, et pas la règle sans match
-        assert!(html.contains("problème(s) détecté(s)"));
+        // Should contain the summary phrase, the two rules with matches, and not the no-match rule
+        assert!(html.contains("problem(s) detected"));
         assert!(html.contains("test-high"));
         assert!(html.contains("test-info"));
         assert!(!html.contains("test-nomatch"));
-        // Doit contenir les couleurs de sévérité
+        // Should contain severity colors
         assert!(html.contains("sev-high-txt"));
         assert!(html.contains("sev-info-txt"));
     }
@@ -261,9 +321,59 @@ Sévérité: low
     #[test]
     fn test_console_explanation() {
         let txt = append_console_explanation(AUDIT_SAMPLE);
-        assert!(txt.contains("problème(s) détecté(s)"));
-        assert!(txt.contains("1 critique(s)"));
-        assert!(txt.contains("1 informatif(s)"));
-        // On ne vérifie plus l'absence de 'test-nomatch' car le texte d'origine est conservé
+        assert!(txt.contains("problem(s) detected"));
+        assert!(txt.contains("1 critical(s)"));
+        assert!(txt.contains("1 informational(s)"));
+        // We no longer check for the absence of 'test-nomatch' as the original text is preserved
+    }
+
+    #[test]
+    fn test_export_json_format() {
+        let json = export_json(AUDIT_SAMPLE, None).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(v.get("summary").is_some());
+        assert!(v.get("results").is_some());
+        let results = v.get("results").unwrap().as_array().unwrap();
+        assert_eq!(results.len(), 2); // 2 rules with matches
+        let ids: Vec<_> = results
+            .iter()
+            .map(|r| r.get("id").unwrap().as_str().unwrap())
+            .collect();
+        assert!(ids.contains(&"test-high"));
+        assert!(ids.contains(&"test-info"));
+        let summary = v.get("summary").unwrap();
+        assert_eq!(summary.get("high").unwrap().as_u64().unwrap(), 1);
+        assert_eq!(summary.get("info").unwrap().as_u64().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_export_english_only_non_regression() {
+        let english = r#"
+Audit Rule: test-high
+Description: Critical
+Severity: high
+  ✅ 2 match(es) found:
+    - Rule1
+    - Rule2
+Audit Rule: test-info
+Description: Info
+Severity: info
+  ✅ 1 match(es) found:
+    - Rule3
+Audit Rule: test-nomatch
+Description: No match
+Severity: low
+  ❌ no firewall rule matches this audit rule
+--- Audit End ---
+"#;
+        // CSV
+        let csv_en = export_csv(english, None).unwrap();
+        assert!(csv_en.contains("test-high"));
+        // HTML
+        let html_en = export_html(english, None).unwrap();
+        assert!(html_en.contains("test-high"));
+        // JSON
+        let json_en = export_json(english, None).unwrap();
+        assert!(json_en.contains("test-high"));
     }
 }

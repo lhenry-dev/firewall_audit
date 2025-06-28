@@ -1,78 +1,400 @@
-- id: allow-ssh-from-anywhere
-  description: Permet SSH depuis n'importe où
+- id: block-any-inbound
+  description: Block all inbound traffic by default (except explicit allows)
   criterias:
     and:
-      - field: name
+      - field: direction
+        operator: equals
+        value: "In"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
         operator: contains
-        value: "SSH"
+        value: "0.0.0.0/0"
+  severity: critical
+
+- id: allow-rdp-restricted
+  description: Allow RDP (3389) only from specific trusted IPs
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: 3389
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: not
+        value: "0.0.0.0/0"
+  severity: high
+
+- id: block-rdp-from-anywhere
+  description: Block RDP (3389) from any source (should not be open to the world)
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: 3389
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: critical
+
+- id: allow-ssh-restricted
+  description: Allow SSH (22) only from specific trusted IPs
+  criterias:
+    and:
       - field: local_ports
         operator: matches
         value: 22
       - field: protocol
         operator: equals
         value: "TCP"
-      - field: remote_addresses
-        operator: contains
-        value: "0.0.0.0/0"
       - field: action
         operator: equals
-        value: "ALLOW"
+        value: "Allow"
+      - field: remote_addresses
+        operator: not
+        value: "0.0.0.0/0"
   severity: high
 
-- id: block-rule-without-app
-  description: Règle qui bloque du trafic sans être liée à une application
-  criterias:
-    and:
-      - field: action
-        operator: equals
-        value: "BLOCK"
-      - field: application_name
-        operator: is_null
-  severity: medium
-
-- id: open-web-from-anywhere
-  description: Permet HTTP/HTTPS ouvert à tous
+- id: block-ssh-from-anywhere
+  description: Block SSH (22) from any source (should not be open to the world)
   criterias:
     and:
       - field: local_ports
         operator: matches
-        value: [22, 80, 443]
+        value: 22
       - field: protocol
         operator: equals
         value: "TCP"
+      - field: action
+        operator: equals
+        value: "Allow"
       - field: remote_addresses
         operator: contains
         value: "0.0.0.0/0"
-      - field: action
-        operator: equals
-        value: "ALLOW"
-  severity: high
+  severity: critical
 
-- id: allow-rdp-from-specific-ip
-  description: Permet RDP (port 3389) depuis IP spécifique
+- id: allow-http-https-restricted
+  description: Allow HTTP/HTTPS (80/443) only from specific trusted IPs (not open to all unless web server)
   criterias:
     and:
       - field: local_ports
         operator: in_range
-        value: [3389, 3389]
+        value: [80, 443]
       - field: protocol
         operator: equals
         value: "TCP"
-      - field: remote_addresses
-        operator: contains
-        value: "192.168.1.100"
       - field: action
         operator: equals
-        value: "ALLOW"
-  severity: low
+        value: "Allow"
+      - field: remote_addresses
+        operator: not
+        value: "0.0.0.0/0"
+  severity: high
 
-- id: allow-any-rule-without-app
-  description: Toute règle ALLOW sans application
+- id: block-smb-from-anywhere
+  description: Block SMB (445/139) from any source (should not be open to the world)
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: [445, 139]
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: critical
+
+- id: block-telnet-from-anywhere
+  description: Block Telnet (23) from any source (should not be open to the world)
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: 23
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: critical
+
+- id: block-all-inbound-except-essential
+  description: Block all inbound except essential business services (customize as needed)
+  criterias:
+    and:
+      - field: direction
+        operator: equals
+        value: "In"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: local_ports
+        operator: not
+        value: [80, 443, 3389, 22, 53, 25, 587, 993, 995]
+  severity: high
+
+- id: detect-any-allow-anywhere
+  description: Detect any rule that allows traffic from any source (0.0.0.0/0)
   criterias:
     and:
       - field: action
         operator: equals
-        value: "ALLOW"
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: high
+
+- id: block-insecure-protocols
+  description: Block insecure protocols (FTP, Telnet, TFTP, SNMP, NetBIOS, etc.)
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: [21, 23, 69, 137, 138, 139, 161, 162]
+      - field: action
+        operator: equals
+        value: "Allow"
+  severity: high
+
+- id: block-outbound-to-any
+  description: Block outbound traffic to any destination unless explicitly allowed
+  criterias:
+    and:
+      - field: direction
+        operator: equals
+        value: "Out"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: high
+
+- id: allow-dns-only-to-trusted
+  description: Allow DNS (53) only to trusted DNS servers
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: 53
+      - field: protocol
+        operator: equals
+        value: "UDP"
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: not
+        value: "0.0.0.0/0"
+  severity: high
+
+- id: block-mail-protocols-from-anywhere
+  description: Block mail protocols (SMTP, IMAP, POP3) from any source (should not be open to the world)
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: [25, 110, 143, 465, 587, 993, 995]
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: high
+
+- id: block-any-rule-without-description
+  description: Detect any rule without a description (should be documented)
+  criterias:
+    and:
+      - field: description
+        operator: is_null
+  severity: medium
+
+- id: block-any-rule-without-application-or-service
+  description: Detect any rule that is not tied to an application or service
+  criterias:
+    and:
       - field: application_name
         operator: is_null
+      - field: service_name
+        operator: is_null
+  severity: medium
+
+- id: block-any-rule-without-logging
+  description: Detect any rule that does not have logging enabled (if applicable)
+  criterias:
+    and:
+      - field: description
+        operator: not
+        value: "log"
+  severity: medium
+
+- id: block-any-rule-without-profile
+  description: Detect any rule not assigned to a profile (Domain, Private, Public)
+  criterias:
+    and:
+      - field: profiles
+        operator: is_null
+  severity: medium
+
+- id: block-any-rule-without-interface
+  description: Detect any rule not assigned to an interface
+  criterias:
+    and:
+      - field: interfaces
+        operator: is_null
+  severity: medium
+
+- id: block-any-rule-without-edge-traversal
+  description: Detect any rule with edge traversal enabled (should be rare)
+  criterias:
+    and:
+      - field: edge_traversal
+        operator: equals
+        value: true
+  severity: medium
+
+- id: block-any-rule-without-grouping
+  description: Detect any rule not assigned to a group
+  criterias:
+    and:
+      - field: grouping
+        operator: is_null
+  severity: low
+
+- id: block-any-rule-without-protocol
+  description: Detect any rule without a protocol specified
+  criterias:
+    and:
+      - field: protocol
+        operator: is_null
+  severity: low
+
+- id: block-any-rule-without-port
+  description: Detect any rule without a port specified (if applicable)
+  criterias:
+    and:
+      - field: local_ports
+        operator: is_null
+      - field: remote_ports
+        operator: is_null
+  severity: low
+
+- id: block-any-rule-without-application-exists
+  description: Detect any rule referencing a non-existent application
+  criterias:
+    and:
+      - field: application_name
+        operator: application_exists
+        value: "dummy.exe"
   severity: info
+
+- id: block-any-rule-without-service-exists
+  description: Detect any rule referencing a non-existent service
+  criterias:
+    and:
+      - field: service_name
+        operator: service_exists
+        value: "dummyservice"
+  severity: info
+
+- id: block-any-rule-with-wildcard
+  description: Detect any rule with wildcard in name or description
+  criterias:
+    or:
+      - field: name
+        operator: wildcard
+        value: "*"
+      - field: description
+        operator: wildcard
+        value: "*"
+  severity: info
+
+- id: block-any-rule-with-regex
+  description: Detect any rule with regex in name or description
+  criterias:
+    or:
+      - field: name
+        operator: regex
+        value: ".*"
+      - field: description
+        operator: regex
+        value: ".*"
+  severity: info
+
+- id: block-any-rule-with-allow-all
+  description: Detect any rule that allows all traffic (any port, any protocol, any address)
+  criterias:
+    and:
+      - field: action
+        operator: equals
+        value: "Allow"
+      - field: local_ports
+        operator: is_null
+      - field: remote_ports
+        operator: is_null
+      - field: protocol
+        operator: is_null
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+  severity: critical
+
+- id: block-any-rule-without-enabled
+  description: Detect any rule that is disabled (should be reviewed or removed)
+  criterias:
+    and:
+      - field: enabled
+        operator: equals
+        value: false
+  severity: info
+
+- id: block-any-rule-without-action
+  description: Detect any rule without an action specified
+  criterias:
+    and:
+      - field: action
+        operator: is_null
+  severity: info
+
+- id: block-any-rule-without-direction
+  description: Detect any rule without a direction specified
+  criterias:
+    and:
+      - field: direction
+        operator: is_null
+  severity: info
+
+- id: block-any-rule-without-name
+  description: Detect any rule without a name
+  criterias:
+    and:
+      - field: name
+        operator: is_null
+  severity: info
+
+# Add more rules as needed for your environment 
