@@ -1,0 +1,40 @@
+- id: allow-ssh-from-anywhere
+  description: Permet SSH depuis n'importe où
+  criteria:
+    local_ports:
+      - 22
+    protocol: TCP
+    remote_addresses:
+      - 0.0.0.0/0
+    action: ALLOW
+  severity: high
+
+- id: block-rule-without-app
+  description: Règle qui bloque du trafic sans être liée à une application
+  criteria:
+    action: BLOCK
+    application_name: null
+  severity: medium
+
+- id: open-web-from-anywhere
+  description: Permet HTTP/HTTPS ouvert à tous
+  criteria:
+    local_ports:
+      - 80
+      - 443
+    protocol: TCP
+    remote_addresses:
+      - 0.0.0.0/0
+    action: ALLOW
+  severity: high
+
+- id: allow-rdp-from-specific-ip
+  description: Permet RDP (port 3389) depuis IP spécifique
+  criteria:
+    local_ports:
+      - 3389
+    protocol: TCP
+    remote_addresses:
+      - 192.168.1.100
+    action: ALLOW
+  severity: low
