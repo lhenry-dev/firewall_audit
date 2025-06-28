@@ -147,6 +147,7 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
     let op = match &cond.operator {
         Some(op) => op,
         None => {
+            // Opérateur inconnu, ne matche jamais
             return false;
         }
     };
@@ -466,14 +467,10 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
             }
             let mut cond = cond.clone();
             cond.parse_operator();
-            if cond.operator.is_none() {
-                errors.push(format!(
-                    "Unknown operator '{}' at {}",
-                    cond.operator_raw, path
-                ));
-                return errors;
-            }
-            let op = cond.operator.as_ref().unwrap();
+            let op = match cond.operator.as_ref() {
+                Some(op) => op,
+                None => return errors, // déjà reporté ci-dessus
+            };
             let val = &cond.value;
             let err = match op {
                 CriteriaOperator::Equals | CriteriaOperator::Not | CriteriaOperator::Matches => {

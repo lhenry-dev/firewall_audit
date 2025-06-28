@@ -12,6 +12,7 @@ serde_yaml = "0.9"
 tempfile = "3"
 clap = { version = "4", features = ["derive"] }
 rayon = "1"
+thiserror = "1.0"
 
 [target.'cfg(windows)'.dependencies]
 windows_firewall = "0.1"

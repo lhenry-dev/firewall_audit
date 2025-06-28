@@ -1,3 +1,4 @@
+use crate::error::FirewallAuditError;
 use serde::Serialize;
 use std::fs::File;
 use std::io::{self, Write};
@@ -231,7 +232,7 @@ pub struct JsonAuditResult {
     pub results: Vec<JsonAuditBlock>,
 }
 
-pub fn export_json(audit_output: &str, path: Option<&str>) -> std::io::Result<String> {
+pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, FirewallAuditError> {
     let blocks = parse_audit_blocks(audit_output);
     let filtered: Vec<_> = blocks
         .into_iter()
@@ -259,10 +260,12 @@ pub fn export_json(audit_output: &str, path: Option<&str>) -> std::io::Result<St
         summary,
         results: json_blocks,
     };
-    let json = serde_json::to_string_pretty(&result).unwrap();
+    let json = serde_json::to_string_pretty(&result)
+        .map_err(|e| FirewallAuditError::ExportError(e.to_string()))?;
     if let Some(path) = path {
-        let mut file = File::create(path)?;
-        file.write_all(json.as_bytes())?;
+        let mut file = std::fs::File::create(path).map_err(FirewallAuditError::Io)?;
+        file.write_all(json.as_bytes())
+            .map_err(FirewallAuditError::Io)?;
     }
     Ok(json)
 }

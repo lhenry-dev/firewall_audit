@@ -1,3 +1,4 @@
+use crate::error::{FirewallAuditError, Result};
 use crate::firewall_rule::FirewallRule;
 use crate::firewall_rule::FirewallRuleProvider;
 use windows_firewall::WindowsFirewallRule;
@@ -5,14 +6,10 @@ use windows_firewall::WindowsFirewallRule;
 pub struct WindowsFirewallProvider;
 
 impl FirewallRuleProvider for WindowsFirewallProvider {
-    fn list_rules() -> Vec<FirewallRule> {
-        match windows_firewall::list_rules() {
-            Ok(rules) => rules.iter().map(FirewallRule::from).collect(),
-            Err(e) => {
-                eprintln!("Failed to retrieve Windows Firewall rules: {}", e);
-                vec![]
-            }
-        }
+    fn list_rules() -> Result<Vec<FirewallRule>> {
+        windows_firewall::list_rules()
+            .map(|rules| rules.iter().map(FirewallRule::from).collect())
+            .map_err(|e| FirewallAuditError::WindowsFirewallError(e.to_string()))
     }
 }
 

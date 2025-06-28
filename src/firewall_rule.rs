@@ -1,3 +1,4 @@
+use crate::error::{FirewallAuditError, Result};
 use std::collections::HashSet;
 use std::net::IpAddr;
 
@@ -27,7 +28,7 @@ pub struct FirewallRule {
 }
 
 pub trait FirewallRuleProvider {
-    fn list_rules() -> Vec<FirewallRule>;
+    fn list_rules() -> Result<Vec<FirewallRule>>;
 }
 
 #[cfg(target_os = "windows")]
@@ -41,14 +42,10 @@ mod platform {
     use super::*;
     pub struct WindowsFirewallProvider;
     impl FirewallRuleProvider for WindowsFirewallProvider {
-        fn list_rules() -> Vec<FirewallRule> {
-            match windows_firewall::list_rules() {
-                Ok(rules) => rules.iter().map(FirewallRule::from).collect(),
-                Err(e) => {
-                    eprintln!("Failed to retrieve Windows Firewall rules: {}", e);
-                    vec![]
-                }
-            }
+        fn list_rules() -> Result<Vec<FirewallRule>> {
+            windows_firewall::list_rules()
+                .map(|rules| rules.iter().map(FirewallRule::from).collect())
+                .map_err(|e| FirewallAuditError::WindowsFirewallError(e.to_string()))
         }
     }
 }
@@ -58,9 +55,10 @@ mod platform {
     use super::*;
     pub struct LinuxFirewallProvider;
     impl FirewallRuleProvider for LinuxFirewallProvider {
-        fn list_rules() -> Vec<FirewallRule> {
-            eprintln!("Firewall rule listing is not implemented on Linux. Returning empty list.");
-            vec![]
+        fn list_rules() -> Result<Vec<FirewallRule>> {
+            Err(FirewallAuditError::ValidationError(
+                "Firewall rule listing is not implemented on Linux".to_string(),
+            ))
         }
     }
 }

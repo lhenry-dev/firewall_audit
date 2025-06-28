@@ -1,12 +1,13 @@
 use super::firewall_rule::{FirewallProvider, FirewallRule, FirewallRuleProvider};
 use crate::criteria::{AuditRule, eval_criterias, validate_criteria_expr};
+use crate::error::{FirewallAuditError, Result};
 use rayon::prelude::*;
 use serde_yaml::Value;
 
-fn load_audit_rules_yaml(path: &str) -> Vec<AuditRule> {
-    let contents = std::fs::read_to_string(path).expect("Error reading file rules.yaml");
+fn load_audit_rules_yaml(path: &str) -> Result<Vec<AuditRule>> {
+    let contents = std::fs::read_to_string(path).map_err(FirewallAuditError::Io)?;
     let values: Vec<Value> =
-        serde_yaml::from_str(&contents).expect("Error parsing file rules.yaml");
+        serde_yaml::from_str(&contents).map_err(FirewallAuditError::YamlParse)?;
     let mut rules = Vec::new();
     for (i, val) in values.into_iter().enumerate() {
         match serde_yaml::from_value::<AuditRule>(val.clone()) {
@@ -16,13 +17,13 @@ fn load_audit_rules_yaml(path: &str) -> Vec<AuditRule> {
             }
         }
     }
-    rules
+    Ok(rules)
 }
 
-fn load_audit_rules_json(path: &str) -> Vec<AuditRule> {
-    let contents = std::fs::read_to_string(path).expect("Error reading file JSON");
+fn load_audit_rules_json(path: &str) -> Result<Vec<AuditRule>> {
+    let contents = std::fs::read_to_string(path).map_err(FirewallAuditError::Io)?;
     let values: Vec<serde_json::Value> =
-        serde_json::from_str(&contents).expect("Error parsing file JSON");
+        serde_json::from_str(&contents).map_err(FirewallAuditError::JsonParse)?;
     let mut rules = Vec::new();
     for (i, val) in values.into_iter().enumerate() {
         match serde_json::from_value::<AuditRule>(val.clone()) {
@@ -32,17 +33,17 @@ fn load_audit_rules_json(path: &str) -> Vec<AuditRule> {
             }
         }
     }
-    rules
+    Ok(rules)
 }
 
 /// Charge and merge audit rules from multiple YAML/JSON files
-pub fn load_audit_rules_multi(paths: &[String]) -> Vec<AuditRule> {
+pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
     let mut all_rules = Vec::new();
     for path in paths {
         let rules: Vec<AuditRule> = if path.ends_with(".yaml") || path.ends_with(".yml") {
-            load_audit_rules_yaml(path)
+            load_audit_rules_yaml(path)?
         } else if path.ends_with(".json") {
-            load_audit_rules_json(path)
+            load_audit_rules_json(path)?
         } else {
             // Try YAML then JSON if no recognized extension
             let try_yaml = std::fs::read_to_string(path)
@@ -57,10 +58,7 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Vec<AuditRule> {
                 if let Some(rules) = try_json {
                     rules
                 } else {
-                    panic!(
-                        "Unsupported file format or parsing failed for criteria: {}",
-                        path
-                    );
+                    return Err(FirewallAuditError::UnsupportedFileFormat { path: path.clone() });
                 }
             }
         };
@@ -79,13 +77,13 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Vec<AuditRule> {
         }
         all_rules.extend(valid_rules);
     }
-    all_rules
+    Ok(all_rules)
 }
 
 /// Multi-file audit (YAML/JSON)
-pub fn run_audit_multi(audit_rules: &[AuditRule]) -> String {
+pub fn run_audit_multi(audit_rules: &[AuditRule]) -> Result<String> {
     let mut output = String::new();
-    let firewall_rules: Vec<FirewallRule> = FirewallProvider::list_rules();
+    let firewall_rules: Vec<FirewallRule> = FirewallProvider::list_rules()?;
     output.push_str("\n--- Firewall Audit ---\n");
     for audit_rule in audit_rules {
         let matches: Vec<String> = firewall_rules
@@ -109,7 +107,7 @@ pub fn run_audit_multi(audit_rules: &[AuditRule]) -> String {
         }
     }
     output.push_str("\n--- Audit End ---\n");
-    output
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -124,7 +122,7 @@ mod tests {
         let mut tmpfile = NamedTempFile::new().unwrap();
         write!(tmpfile, "{}", yaml).unwrap();
         let path = tmpfile.path().to_str().unwrap();
-        let rules = super::load_audit_rules_yaml(path);
+        let rules = super::load_audit_rules_yaml(path).expect("Failed to load YAML rules");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].id, "test");
     }
@@ -137,7 +135,7 @@ mod tests {
         let mut tmpfile = NamedTempFile::new().unwrap();
         write!(tmpfile, "{}", json).unwrap();
         let path = tmpfile.path().to_str().unwrap();
-        let rules = super::load_audit_rules_json(path);
+        let rules = super::load_audit_rules_json(path).expect("Failed to load JSON rules");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].id, "testjson");
     }
@@ -154,7 +152,8 @@ mod tests {
         write!(tmpjson, "{}", json).unwrap();
         let path_yaml = tmpyaml.path().to_str().unwrap().to_string();
         let path_json = tmpjson.path().to_str().unwrap().to_string();
-        let rules = super::load_audit_rules_multi(&[path_yaml, path_json]);
+        let rules = super::load_audit_rules_multi(&[path_yaml, path_json])
+            .expect("Failed to load multi rules");
         assert_eq!(rules.len(), 2);
         assert!(rules.iter().any(|r| r.id == "test1"));
         assert!(rules.iter().any(|r| r.id == "test2"));
@@ -195,7 +194,7 @@ mod tests {
             })
             .collect();
         // Sequential audit
-        let audit_rules = load_audit_rules_yaml(&path);
+        let audit_rules = load_audit_rules_yaml(&path).expect("Failed to load audit rules");
         let mut matches_seq = Vec::new();
         for audit_rule in &audit_rules {
             for fw_rule in &fw_rules {

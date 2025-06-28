@@ -38,16 +38,38 @@ pub enum ExportFmt {
 
 fn main() {
     let cli = Cli::parse();
-    let audit_rules = firewall_audit::load_audit_rules_multi(&cli.criteria);
-    println!("Loaded {} audit rules.", audit_rules.len());
-    let output = firewall_audit::run_audit_multi(&audit_rules);
+
+    // Charger et valider les règles
+    let audit_rules = match firewall_audit::load_audit_rules_multi(&cli.criteria) {
+        Ok(rules) => {
+            println!("Loaded {} audit rules.", rules.len());
+            rules
+        }
+        Err(e) => {
+            eprintln!("Error loading audit rules: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    // Exécuter l'audit
+    let output = match firewall_audit::run_audit_multi(&audit_rules) {
+        Ok(output) => output,
+        Err(e) => {
+            eprintln!("Error running audit: {}", e);
+            std::process::exit(1);
+        }
+    };
+
     match cli.export {
         Some(ExportFmt::Csv) => {
             let res = export_csv(&output, cli.output.as_deref());
             match res {
                 Ok(csv) if cli.output.is_none() => print!("{}", csv),
                 Ok(_) => println!("Export CSV completed."),
-                Err(e) => eprintln!("CSV export error: {}", e),
+                Err(e) => {
+                    eprintln!("CSV export error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
         Some(ExportFmt::Html) => {
@@ -55,7 +77,10 @@ fn main() {
             match res {
                 Ok(html) if cli.output.is_none() => print!("{}", html),
                 Ok(_) => println!("Export HTML completed."),
-                Err(e) => eprintln!("HTML export error: {}", e),
+                Err(e) => {
+                    eprintln!("HTML export error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
         Some(ExportFmt::Json) => {
@@ -63,7 +88,10 @@ fn main() {
             match res {
                 Ok(json) if cli.output.is_none() => print!("{}", json),
                 Ok(_) => println!("Export JSON completed."),
-                Err(e) => eprintln!("JSON export error: {}", e),
+                Err(e) => {
+                    eprintln!("JSON export error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
         None => {
