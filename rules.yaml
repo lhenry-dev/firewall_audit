@@ -1,40 +1,78 @@
 - id: allow-ssh-from-anywhere
   description: Permet SSH depuis n'importe où
-  criteria:
-    local_ports:
-      - 22
-    protocol: TCP
-    remote_addresses:
-      - 0.0.0.0/0
-    action: ALLOW
+  criterias:
+    and:
+      - field: name
+        operator: contains
+        value: "SSH"
+      - field: local_ports
+        operator: matches
+        value: 22
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+      - field: action
+        operator: equals
+        value: "ALLOW"
   severity: high
 
 - id: block-rule-without-app
   description: Règle qui bloque du trafic sans être liée à une application
-  criteria:
-    action: BLOCK
-    application_name: null
+  criterias:
+    and:
+      - field: action
+        operator: equals
+        value: "BLOCK"
+      - field: application_name
+        operator: is_null
   severity: medium
 
 - id: open-web-from-anywhere
   description: Permet HTTP/HTTPS ouvert à tous
-  criteria:
-    local_ports:
-      - 80
-      - 443
-    protocol: TCP
-    remote_addresses:
-      - 0.0.0.0/0
-    action: ALLOW
+  criterias:
+    and:
+      - field: local_ports
+        operator: matches
+        value: [22, 80, 443]
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: remote_addresses
+        operator: contains
+        value: "0.0.0.0/0"
+      - field: action
+        operator: equals
+        value: "ALLOW"
   severity: high
 
 - id: allow-rdp-from-specific-ip
   description: Permet RDP (port 3389) depuis IP spécifique
-  criteria:
-    local_ports:
-      - 3389
-    protocol: TCP
-    remote_addresses:
-      - 192.168.1.100
-    action: ALLOW
+  criterias:
+    and:
+      - field: local_ports
+        operator: in_range
+        value: [3389, 3389]
+      - field: protocol
+        operator: equals
+        value: "TCP"
+      - field: remote_addresses
+        operator: contains
+        value: "192.168.1.100"
+      - field: action
+        operator: equals
+        value: "ALLOW"
   severity: low
+
+- id: allow-any-rule-without-app
+  description: Toute règle ALLOW sans application
+  criterias:
+    and:
+      - field: action
+        operator: equals
+        value: "ALLOW"
+      - field: application_name
+        operator: is_null
+  severity: info
