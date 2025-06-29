@@ -6,5 +6,5 @@ pub mod summary;
 
 pub use csv::export_csv;
 pub use html::export_html;
-pub use json::{JsonAuditBlock, JsonAuditResult, JsonAuditSummary, export_json};
-pub use summary::append_console_explanation;
+pub use json::{export_json, JsonAuditBlock, JsonAuditResult, JsonAuditSummary};
+pub use summary::audit_summary_phrase;

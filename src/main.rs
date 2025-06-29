@@ -8,8 +8,9 @@
 //! ```
 
 use clap::{Parser, ValueEnum};
-use firewall_audit::{append_console_explanation, export_csv, export_html, export_json};
+use firewall_audit::{export_csv, export_html, export_json};
 use std::process;
+use tracing::{error, info, warn};
 
 /// Supported export formats
 #[derive(ValueEnum, Clone, Debug)]
@@ -38,36 +39,49 @@ struct Cli {
 
 /// Entry point for the firewall_audit CLI.
 fn main() {
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_target(false)
+        .init();
     let cli = Cli::parse();
-    // Load rules file
-    let rules_path = &cli.rules;
-    let rules = std::fs::read_to_string(rules_path).unwrap_or_else(|e| {
-        eprintln!("Error reading rules file '{}': {}", rules_path, e);
+
+    let audit_rules =
+        firewall_audit::load_audit_rules_multi(&[cli.rules.clone()]).unwrap_or_else(|e| {
+            error!("Error loading audit rules: {}", e);
+            process::exit(1);
+        });
+    info!("Loaded {} audit rule(s).", audit_rules.len());
+    if audit_rules.is_empty() {
+        error!("No valid audit rules loaded. Exiting.");
+        process::exit(1);
+    }
+
+    let audit_output = firewall_audit::run_audit_multi(&audit_rules).unwrap_or_else(|e| {
+        error!("Error running audit: {}", e);
         process::exit(1);
     });
-    // Simulate audit output (replace with real audit logic)
-    let audit_output = rules; // TODO: call audit engine
-    // Export
-    let result = match cli.export {
-        ExportFormat::Csv => {
-            export_csv(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
-        }
-        ExportFormat::Html => {
-            export_html(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
-        }
-        ExportFormat::Json => {
-            export_json(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
-        }
-    };
-    match result {
-        Ok(content) => {
-            if cli.output.is_none() {
-                println!("{}", append_console_explanation(&content));
+    let summary = firewall_audit::audit_summary_phrase(&audit_output);
+    if cli.output.is_none() {
+        info!("\n{}", audit_output);
+    } else {
+        let result = match cli.export {
+            ExportFormat::Csv => {
+                export_csv(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+            }
+            ExportFormat::Html => {
+                export_html(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+            }
+            ExportFormat::Json => {
+                export_json(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+            }
+        };
+        match result {
+            Ok(_) => info!("Export successful to {:?}", cli.output.as_deref().unwrap()),
+            Err(e) => {
+                error!("Export error: {}", e);
+                process::exit(1);
             }
         }
-        Err(e) => {
-            eprintln!("Export error: {}", e);
-            process::exit(1);
-        }
     }
+    warn!("{}", summary);
 }

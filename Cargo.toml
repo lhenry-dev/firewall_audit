@@ -23,6 +23,9 @@ regex = "1"
 strum = "0.26"
 strum_macros = "0.26"
 clap = { version = "4", features = ["derive"] }
+owo-colors = "4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
 [target.'cfg(windows)'.dependencies]
 windows_firewall = "0.1"

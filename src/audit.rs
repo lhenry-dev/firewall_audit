@@ -1,4 +1,5 @@
 use std::path::Path;
+use tracing::warn;
 
 use super::firewall_rule::{FirewallProvider, FirewallRule, FirewallRuleProvider};
 use crate::criteria::eval::eval_criterias;
@@ -29,7 +30,7 @@ where
         match serde_json::from_value::<AuditRule>(json_val) {
             Ok(rule) => rules.push(rule),
             Err(e) => {
-                eprintln!("Rule at index {i} ignored: {e} (content: {val:?})");
+                warn!("Rule at index {} ignored: {} (content: {:?})", i, e, val);
             }
         }
     }
@@ -85,7 +86,7 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
                 valid_rules.push(rule);
             } else {
                 for err in errors {
-                    eprintln!("Rule '{}' ignored: {}", rule.id, err);
+                    warn!("Rule '{}' ignored: {}", rule.id, err);
                 }
             }
         }
