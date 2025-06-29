@@ -26,7 +26,7 @@ where
     let mut rules = Vec::new();
     for (i, val) in values.into_iter().enumerate() {
         // Convert value to serde_json::Value for uniform deserialization
-        let json_val = serde_json::to_value(&val).unwrap();
+        let json_val = serde_json::to_value(&val)?;
         match serde_json::from_value::<AuditRule>(json_val) {
             Ok(rule) => rules.push(rule),
             Err(e) => {
@@ -49,7 +49,17 @@ fn load_audit_rules_json(path: &str) -> Result<Vec<AuditRule>> {
     })
 }
 
-/// Charge and merge audit rules from multiple YAML/JSON files
+/// Loads and merges audit rules from multiple YAML/JSON files.
+///
+/// # Arguments
+/// * `paths` - List of file paths
+///
+/// # Returns
+/// * `Ok(Vec<AuditRule>)` - The loaded and validated rules
+/// * `Err(FirewallAuditError)` - If loading or parsing fails
+///
+/// # Errors
+/// Returns an error if a file cannot be read, parsed, or contains invalid rules.
 pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
     let mut all_rules = Vec::new();
     for path in paths {
@@ -96,6 +106,16 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
 }
 
 /// Multi-file audit (YAML/JSON)
+///
+/// # Arguments
+/// * `audit_rules` - List of audit rules
+///
+/// # Returns
+/// * `Ok(String)` - The audit output as a string
+/// * `Err(FirewallAuditError)` - If firewall rules cannot be listed
+///
+/// # Errors
+/// Returns an error if firewall rules cannot be listed or if an internal error occurs.
 pub fn run_audit_multi(audit_rules: &[AuditRule]) -> Result<String> {
     let mut output = String::new();
     let firewall_rules: Vec<FirewallRule> = FirewallProvider::list_rules()?;

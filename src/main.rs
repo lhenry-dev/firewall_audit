@@ -10,7 +10,7 @@
 use clap::{Parser, ValueEnum};
 use firewall_audit::{export_csv, export_html, export_json};
 use std::process;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 /// Supported export formats
 #[derive(ValueEnum, Clone, Debug)]
@@ -62,26 +62,27 @@ fn main() {
     });
     let summary = firewall_audit::audit_summary_phrase(&audit_output);
     if cli.output.is_none() {
-        info!("\n{}", audit_output);
+        info!("{}", audit_output);
     } else {
+        let output_path = cli.output.as_deref();
         let result = match cli.export {
-            ExportFormat::Csv => {
-                export_csv(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
-            }
+            ExportFormat::Csv => export_csv(&audit_output, output_path).map_err(|e| e.to_string()),
             ExportFormat::Html => {
-                export_html(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+                export_html(&audit_output, output_path).map_err(|e| e.to_string())
             }
             ExportFormat::Json => {
-                export_json(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+                export_json(&audit_output, output_path).map_err(|e| e.to_string())
             }
         };
         match result {
-            Ok(_) => info!("Export successful to {:?}", cli.output.as_deref().unwrap()),
+            Ok(_) => info!("Export successful to {}", output_path.unwrap_or("Unknown")),
             Err(e) => {
                 error!("Export error: {}", e);
                 process::exit(1);
             }
         }
     }
-    warn!("{}", summary);
+
+    println!();
+    info!("{summary}");
 }

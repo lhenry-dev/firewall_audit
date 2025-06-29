@@ -15,6 +15,9 @@ use std::io::{self, Write};
 /// # Returns
 /// * `Ok(String)` - The HTML content (also written to file if path is Some)
 /// * `Err(io::Error)` - If writing to file fails
+///
+/// # Errors
+/// Returns an error if writing to the file fails.
 pub fn export_html(audit_output: &str, path: Option<&str>) -> io::Result<String> {
     let mut blocks = parse_audit_blocks(audit_output);
     blocks.sort_by_key(|b| std::cmp::Reverse(severity_order(&b.severity)));

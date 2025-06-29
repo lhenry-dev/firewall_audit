@@ -54,6 +54,9 @@ pub struct JsonAuditResult {
 /// # Returns
 /// * `Ok(String)` - The JSON content (also written to file if path is Some)
 /// * `Err(FirewallAuditError)` - If writing to file or serializing fails
+///
+/// # Errors
+/// Returns an error if writing to the file or serializing fails.
 pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, FirewallAuditError> {
     let blocks = parse_audit_blocks(audit_output);
     let filtered: Vec<_> = blocks
