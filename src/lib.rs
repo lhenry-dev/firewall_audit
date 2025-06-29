@@ -1,11 +1,33 @@
-pub mod audit;
-pub mod criteria;
-pub mod error;
-pub mod export;
-pub mod firewall_rule;
+#![crate_type = "lib"]
+#![forbid(unsafe_code)]
+#![forbid(missing_debug_implementations)]
+#![forbid(missing_docs)]
+#![doc = include_str!("../README.md")]
+
+//! # firewall_audit
+//!
+//! A cross-platform firewall audit tool and library.
+//!
+//! - Audit firewall rules against user-defined criteria (YAML/JSON)
+//! - Export results in CSV, HTML, or JSON
+//! - Usable as a CLI or as a library
+//!
+//! ## Example (CLI)
+//! ```sh
+//! firewall_audit --rules rules.yaml --export csv --output result.csv
+//! ```
+
+mod audit;
+mod criteria;
+mod error;
+mod export;
+mod firewall_rule;
 
 pub use audit::{load_audit_rules_multi, run_audit_multi};
 pub use criteria::{AuditRule, CriteriaCondition, CriteriaExpr, CriteriaOperator};
 pub use error::{FirewallAuditError, Result};
-pub use export::{append_console_explanation, export_csv, export_html, export_json};
+pub use export::{
+    append_console_explanation, export_csv, export_html, export_json, JsonAuditBlock,
+    JsonAuditResult, JsonAuditSummary,
+};
 pub use firewall_rule::FirewallRule;

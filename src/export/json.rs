@@ -1,32 +1,59 @@
+//! JSON export module for `firewall_audit`
+//!
+//! Provides a function to export audit results to JSON format.
+
 use crate::error::FirewallAuditError;
 use crate::export::block::{count_by_severity, parse_audit_blocks};
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
 
-#[derive(Serialize)]
+/// Represents a single audit block for JSON export.
+#[derive(Debug, Serialize)]
 pub struct JsonAuditBlock {
+    /// Rule ID
     pub id: String,
+    /// Rule description
     pub description: String,
+    /// Rule severity
     pub severity: String,
+    /// List of matching firewall rules
     pub matches: Vec<String>,
 }
 
-#[derive(Serialize)]
+/// Represents the summary of audit results for JSON export.
+#[derive(Debug, Serialize)]
 pub struct JsonAuditSummary {
+    /// Number of high severity rules
     pub high: usize,
+    /// Number of medium severity rules
     pub medium: usize,
+    /// Number of low severity rules
     pub low: usize,
+    /// Number of info severity rules
     pub info: usize,
+    /// Total number of rules
     pub total: usize,
 }
 
-#[derive(Serialize)]
+/// Represents the full audit result for JSON export.
+#[derive(Debug, Serialize)]
 pub struct JsonAuditResult {
+    /// Summary of the audit
     pub summary: JsonAuditSummary,
+    /// List of audit blocks
     pub results: Vec<JsonAuditBlock>,
 }
 
+/// Export the audit result (String) to JSON format in a file or return the JSON as a String.
+///
+/// # Arguments
+/// * `audit_output` - The audit result as a string (from the audit engine)
+/// * `path` - Optional output file path. If None, returns the JSON as a String.
+///
+/// # Returns
+/// * `Ok(String)` - The JSON content (also written to file if path is Some)
+/// * `Err(FirewallAuditError)` - If writing to file or serializing fails
 pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, FirewallAuditError> {
     let blocks = parse_audit_blocks(audit_output);
     let filtered: Vec<_> = blocks
@@ -68,7 +95,7 @@ pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, Fir
 #[cfg(test)]
 mod tests {
     use super::*;
-    const AUDIT_SAMPLE: &str = r#"
+    const AUDIT_SAMPLE: &str = r"
 Audit Rule: test-high
 Description: Critical
 Severity: high
@@ -85,7 +112,7 @@ Description: No match
 Severity: low
   ❌ no firewall rule matches this audit rule
 --- Audit End ---
-"#;
+";
 
     #[test]
     fn test_export_json_format() {

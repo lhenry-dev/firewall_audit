@@ -63,11 +63,8 @@ fn value_is_null(val: &Option<Value>) -> bool {
 pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
     let mut cond = cond.clone();
     cond.parse_operator();
-    let op = match &cond.operator {
-        Some(op) => op,
-        None => {
-            return false;
-        }
+    let Some(op) = &cond.operator else {
+        return false;
     };
     let field_val = get_field_value(rule, &cond.field);
     match op {
@@ -134,7 +131,7 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
                 (field_val.as_ref(), cond.value.as_ref())
             {
                 let mut regex_pattern = String::new();
-                let chars = pattern.chars().peekable();
+                let chars = pattern.chars();
                 for c in chars {
                     match c {
                         '*' => regex_pattern.push_str(".*"),
@@ -142,7 +139,7 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
                         _ => regex_pattern.push_str(&regex::escape(&c.to_string())),
                     }
                 }
-                let regex_pattern = format!("^{}$", regex_pattern);
+                let regex_pattern = format!("^{regex_pattern}$");
                 Regex::new(&regex_pattern)
                     .map(|re| re.is_match(s))
                     .unwrap_or(false)
@@ -204,7 +201,7 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
             if let (Some(Value::Sequence(seq)), Some(Value::String(cidr))) =
                 (field_val.as_ref(), cond.value.as_ref())
             {
-                if let Ok(ipnet) = cidr.parse::<IpNet>() {
+                cidr.parse::<IpNet>().is_ok_and(|ipnet| {
                     seq.iter().any(|v| match v {
                         Value::String(ipstr) => ipstr
                             .parse::<IpAddr>()
@@ -212,9 +209,7 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
                             .unwrap_or(false),
                         _ => false,
                     })
-                } else {
-                    false
-                }
+                })
             } else if let (Some(Value::String(ipstr)), Some(Value::String(cidr))) =
                 (field_val.as_ref(), cond.value.as_ref())
             {

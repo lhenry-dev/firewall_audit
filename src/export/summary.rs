@@ -1,5 +1,16 @@
+//! Console summary module for `firewall_audit`
+//!
+//! Provides a function to append a summary message to the audit output for console display.
+
 use crate::export::block::{count_by_severity, parse_audit_blocks};
 
+/// Appends an explanatory summary message to the audit output for console display.
+///
+/// # Arguments
+/// * `audit_output` - The audit result as a string (from the audit engine)
+///
+/// # Returns
+/// * `String` - The audit output with a summary message appended
 pub fn append_console_explanation(audit_output: &str) -> String {
     let blocks = parse_audit_blocks(audit_output);
     let filtered: Vec<_> = blocks
@@ -12,11 +23,10 @@ pub fn append_console_explanation(audit_output: &str) -> String {
     out.push('\n');
     if total > 0 {
         out.push_str(&format!(
-            "{} problem(s) detected : {} critical(s), {} important(s), {} minor(s), {} informational(s).\n",
-            total, high, medium, low, info
+            "{total} problem(s) detected : {high} critical(s), {medium} important(s), {low} minor(s), {info} informational(s).\n"
         ));
     } else {
-        out.push_str("No problems detected according to audit criteria.\n");
+        out.push_str("No problem detected according to the audit criteria.\n");
     }
     out
 }
@@ -24,7 +34,7 @@ pub fn append_console_explanation(audit_output: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const AUDIT_SAMPLE: &str = r#"
+    const AUDIT_SAMPLE: &str = r"
 Audit Rule: test-high
 Description: Critical
 Severity: high
@@ -41,7 +51,7 @@ Description: No match
 Severity: low
   ❌ no firewall rule matches this audit rule
 --- Audit End ---
-"#;
+";
 
     #[test]
     fn test_console_explanation() {

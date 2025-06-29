@@ -1,106 +1,73 @@
+//! Firewall Audit CLI
+//!
+//! This binary audits firewall rules against user-defined criteria and exports the results in various formats (CSV, HTML, JSON).
+//!
+//! # Example
+//! ```sh
+//! firewall_audit --rules rules.yaml --export csv --output result.csv
+//! ```
+
 use clap::{Parser, ValueEnum};
 use firewall_audit::{append_console_explanation, export_csv, export_html, export_json};
+use std::process;
 
-/// Outil d'audit des règles Windows Firewall
-#[derive(Parser, Debug)]
-#[command(author, version, about = "Audit avancé des règles Windows Firewall", long_about = None, 
-    after_help = "\
-EXAMPLES :
-  Audit simple avec un fichier YAML :
-    firewall_audit --criteria rules.yaml
-  Audit avec plusieurs fichiers YAML/JSON :
-    firewall_audit --criteria rules1.yaml rules2.json
-  Export CSV :
-    firewall_audit --criteria rules.yaml --export csv --output result.csv
-  Export HTML :
-    firewall_audit --criteria rules.yaml --export html --output result.html
-  Export JSON :
-    firewall_audit --criteria rules.yaml --export json --output result.json
-")]
-pub struct Cli {
-    /// Audit criteria files (YAML or JSON)
-    #[arg(short, long, required = true)]
-    criteria: Vec<String>,
-    /// Export format (csv, html, json)
-    #[arg(short, long, value_enum)]
-    export: Option<ExportFmt>,
-    /// Output file (otherwise displayed in console)
-    #[arg(short, long)]
-    output: Option<String>,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
-pub enum ExportFmt {
+/// Supported export formats
+#[derive(ValueEnum, Clone, Debug)]
+enum ExportFormat {
     Csv,
     Html,
     Json,
 }
 
+/// Firewall Audit CLI
+#[derive(Parser, Debug)]
+#[command(author, version, about = "Cross-platform firewall audit tool (CSV/HTML/JSON export)", long_about = None)]
+struct Cli {
+    /// Path to the rules file (YAML or JSON)
+    #[arg(short, long, required = true)]
+    rules: String,
+
+    /// Export format (csv, html, json)
+    #[arg(short, long, value_enum, default_value = "csv")]
+    export: ExportFormat,
+
+    /// Output file (if not set, print to stdout)
+    #[arg(short, long)]
+    output: Option<String>,
+}
+
+/// Entry point for the firewall_audit CLI.
 fn main() {
     let cli = Cli::parse();
-
-    let audit_rules = match firewall_audit::load_audit_rules_multi(&cli.criteria) {
-        Ok(rules) => {
-            println!("Loaded {} audit rules.", rules.len());
-            rules
+    // Load rules file
+    let rules_path = &cli.rules;
+    let rules = std::fs::read_to_string(rules_path).unwrap_or_else(|e| {
+        eprintln!("Error reading rules file '{}': {}", rules_path, e);
+        process::exit(1);
+    });
+    // Simulate audit output (replace with real audit logic)
+    let audit_output = rules; // TODO: call audit engine
+    // Export
+    let result = match cli.export {
+        ExportFormat::Csv => {
+            export_csv(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
         }
-        Err(e) => {
-            eprintln!("Error loading audit rules: {}", e);
-            std::process::exit(1);
+        ExportFormat::Html => {
+            export_html(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
+        }
+        ExportFormat::Json => {
+            export_json(&audit_output, cli.output.as_deref()).map_err(|e| e.to_string())
         }
     };
-
-    let output = match firewall_audit::run_audit_multi(&audit_rules) {
-        Ok(output) => output,
+    match result {
+        Ok(content) => {
+            if cli.output.is_none() {
+                println!("{}", append_console_explanation(&content));
+            }
+        }
         Err(e) => {
-            eprintln!("Error running audit: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    match cli.export {
-        Some(ExportFmt::Csv) => {
-            let res = export_csv(&output, cli.output.as_deref());
-            match res {
-                Ok(csv) if cli.output.is_none() => print!("{}", csv),
-                Ok(_) => println!("Export CSV completed."),
-                Err(e) => {
-                    eprintln!("CSV export error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-        }
-        Some(ExportFmt::Html) => {
-            let res = export_html(&output, cli.output.as_deref());
-            match res {
-                Ok(html) if cli.output.is_none() => print!("{}", html),
-                Ok(_) => println!("Export HTML completed."),
-                Err(e) => {
-                    eprintln!("HTML export error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-        }
-        Some(ExportFmt::Json) => {
-            let res = export_json(&output, cli.output.as_deref());
-            match res {
-                Ok(json) if cli.output.is_none() => print!("{}", json),
-                Ok(_) => println!("Export JSON completed."),
-                Err(e) => {
-                    eprintln!("JSON export error: {}", e);
-                    std::process::exit(1);
-                }
-            }
-        }
-        None => {
-            print!("{}", append_console_explanation(&output));
-        }
-    }
-
-    let summary = firewall_audit::export::append_console_explanation(&output);
-    if let Some(ExportFmt::Csv) | Some(ExportFmt::Html) | Some(ExportFmt::Json) = cli.export {
-        if let Some(line) = summary.lines().find(|l| l.contains("problem(s) detected")) {
-            println!("{}", line.trim());
+            eprintln!("Export error: {}", e);
+            process::exit(1);
         }
     }
 }

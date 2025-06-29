@@ -1,3 +1,9 @@
+//! Audit block utilities for `firewall_audit`
+//!
+//! Provides parsing and severity helpers for audit result blocks.
+
+/// Represents a parsed audit block from the audit output.
+#[derive(Debug, Clone)]
 pub struct AuditBlock {
     pub id: String,
     pub description: String,
@@ -6,6 +12,7 @@ pub struct AuditBlock {
     pub no_match: bool,
 }
 
+/// Returns a numeric order for severity (higher is more severe).
 pub fn severity_order(sev: &str) -> u8 {
     match sev.to_lowercase().as_str() {
         "high" => 4,
@@ -16,6 +23,7 @@ pub fn severity_order(sev: &str) -> u8 {
     }
 }
 
+/// Parses the audit output into a vector of `AuditBlock` structs.
 pub fn parse_audit_blocks(audit_output: &str) -> Vec<AuditBlock> {
     let mut blocks = Vec::new();
     let mut current = AuditBlock {
@@ -54,6 +62,7 @@ pub fn parse_audit_blocks(audit_output: &str) -> Vec<AuditBlock> {
     blocks
 }
 
+/// Counts the number of blocks by severity.
 pub fn count_by_severity<'a, I: Iterator<Item = &'a AuditBlock>>(
     blocks: I,
 ) -> (usize, usize, usize, usize) {

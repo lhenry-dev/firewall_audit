@@ -1,43 +1,47 @@
 # firewall_audit
 
-Rust tool for advanced audit of Windows Firewall rules, inspired by Sigma, with expressive YAML/JSON criteria, export CSV/HTML/JSON, and parallel audit.
+[![Crates.io](https://img.shields.io/crates/v/firewall_audit.svg)](https://crates.io/crates/firewall_audit)
+[![Docs.rs](https://docs.rs/firewall_audit/badge.svg)](https://docs.rs/firewall_audit)
+[![CI](https://github.com/<user>/<repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<user>/<repo>/actions)
 
-## Installation
+A cross-platform firewall audit tool and library.
+
+- Audit firewall rules against user-defined criteria (YAML/JSON)
+- Export results in CSV, HTML, or JSON
+- Usable as a CLI or as a library
+
+## Usage
 
 ```sh
-# Prerequisites: Rust >= 1.70
-cargo build --release
+firewall_audit --rules rules.yaml --export csv --output result.csv
 ```
 
-## Quick Usage
+## Features
 
-```sh
-# Simple Audit
-firewall_audit --criteria rules.yaml
+- Multi-format rules (YAML/JSON)
+- Export CSV, HTML, JSON
+- Cross-platform (Windows/Linux)
+- Extensible criteria language
+- CLI and library usage
 
-# Audit multi-files YAML/JSON
-firewall_audit --criteria rules1.yaml rules2.json
+## Limitations
 
-# Export CSV
-firewall_audit --criteria rules.yaml --export csv --output result.csv
-
-# Export HTML
-firewall_audit --criteria rules.yaml --export html --output result.html
-
-# Export JSON
-firewall_audit --criteria rules.yaml --export json --output result.json
-```
-
-## Example Rules
-See [docs/EXAMPLES.md](EXAMPLES.md)
-
-## FAQ
-- **Which operators are supported?**
-  - equals, contains, startswith, endswith, in_range, matches, is_null, regex, wildcard, lt, lte, gt, gte, cidr, application_exists, service_exists, and/or/not
-- **How to add a custom criterion?**
-  - Add an operator in `CriteriaOperator` and implement the logic in `eval_condition`.
-- **How to test the tool?**
-  - `cargo test` runs all unit and integration tests.
+- **Platform support:**
+  - Full firewall rule listing and audit is implemented for **Windows** (using Windows Firewall APIs).
+  - On **Linux**, only partial or stub support is available (rule listing may not be implemented).
+  - Not tested on macOS.
+- **System dependencies:**
+  - On Windows, the tool may require administrative privileges to list all firewall rules.
+  - The `sc` command is used for service existence checks (Windows only).
+- **Rule format:**
+  - Only YAML and JSON rule files are supported.
+- **Export:**
+  - CSV, HTML, and JSON export are supported. Other formats require custom implementation.
+- **Internationalization:**
+  - All messages and output are in English.
+- **Other:**
+  - The tool does not modify firewall rules, it only audits and reports.
+  - Some advanced criteria may require extending the code (see `CriteriaOperator`).
 
 ## License
-MIT 
+MIT OR Apache-2.0 

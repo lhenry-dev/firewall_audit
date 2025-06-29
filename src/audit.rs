@@ -1,9 +1,19 @@
+use std::path::Path;
+
 use super::firewall_rule::{FirewallProvider, FirewallRule, FirewallRuleProvider};
 use crate::criteria::eval::eval_criterias;
 use crate::criteria::types::AuditRule;
 use crate::criteria::validation::validate_criteria_expr;
 use crate::error::{FirewallAuditError, Result};
 use rayon::prelude::*;
+
+/// Returns the file extension in lowercase, if any (without dot)
+fn get_extension(path: &str) -> Option<String> {
+    Path::new(path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+}
 
 fn load_audit_rules_from<T, F>(path: &str, parse: F) -> Result<Vec<AuditRule>>
 where
@@ -19,7 +29,7 @@ where
         match serde_json::from_value::<AuditRule>(json_val) {
             Ok(rule) => rules.push(rule),
             Err(e) => {
-                eprintln!("Rule at index {} ignored: {} (content: {:?})", i, e, val);
+                eprintln!("Rule at index {i} ignored: {e} (content: {val:?})");
             }
         }
     }
@@ -42,14 +52,30 @@ fn load_audit_rules_json(path: &str) -> Result<Vec<AuditRule>> {
 pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
     let mut all_rules = Vec::new();
     for path in paths {
-        let rules: Vec<AuditRule> = if path.ends_with(".yaml") || path.ends_with(".yml") {
-            load_audit_rules_yaml(path)?
-        } else if path.ends_with(".json") {
-            load_audit_rules_json(path)?
-        } else {
-            return Err(FirewallAuditError::UnsupportedFileFormat { path: path.clone() });
+        let rules: Vec<AuditRule> = match get_extension(path).as_deref() {
+            Some("yaml" | "yml") => load_audit_rules_yaml(path)?,
+            Some("json") => load_audit_rules_json(path)?,
+            _ => {
+                // Try YAML then JSON if no recognized extension
+                let try_yaml = std::fs::read_to_string(path)
+                    .ok()
+                    .and_then(|c| serde_yaml::from_str::<Vec<AuditRule>>(&c).ok());
+                if let Some(rules) = try_yaml {
+                    rules
+                } else {
+                    let try_json = std::fs::read_to_string(path)
+                        .ok()
+                        .and_then(|c| serde_json::from_str::<Vec<AuditRule>>(&c).ok());
+                    if let Some(rules) = try_json {
+                        rules
+                    } else {
+                        return Err(FirewallAuditError::UnsupportedFileFormat {
+                            path: path.clone(),
+                        });
+                    }
+                }
+            }
         };
-
         // Validation: filter out invalid rules and print errors
         let mut valid_rules = Vec::new();
         for rule in rules {
@@ -90,7 +116,7 @@ pub fn run_audit_multi(audit_rules: &[AuditRule]) -> Result<String> {
             output.push_str(&format!("Severity: {}\n", audit_rule.severity));
             output.push_str(&format!("  ✅ {} match(es) found:\n", matches.len()));
             for name in matches {
-                output.push_str(&format!("    - {}\n", name));
+                output.push_str(&format!("    - {name}\n"));
             }
         }
     }
@@ -108,7 +134,7 @@ mod tests {
     fn test_load_audit_rules_yaml() {
         let yaml = "- id: test\n  description: test\n  criterias:\n    and:\n      - field: name\n        operator: equals\n        value: 'TestRule'\n  severity: info\n";
         let mut tmpfile = NamedTempFile::new().unwrap();
-        write!(tmpfile, "{}", yaml).unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap();
         let rules = super::load_audit_rules_yaml(path).expect("Failed to load YAML rules");
         assert_eq!(rules.len(), 1);
@@ -121,7 +147,7 @@ mod tests {
             {"id": "testjson", "description": "desc", "criterias": {"and": [{"field": "name", "operator": "equals", "value": "TestRule"}]}, "severity": "info"}
         ]"#;
         let mut tmpfile = NamedTempFile::new().unwrap();
-        write!(tmpfile, "{}", json).unwrap();
+        write!(tmpfile, "{json}").unwrap();
         let path = tmpfile.path().to_str().unwrap();
         let rules = super::load_audit_rules_json(path).expect("Failed to load JSON rules");
         assert_eq!(rules.len(), 1);
@@ -136,8 +162,8 @@ mod tests {
         ]"#;
         let mut tmpyaml = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         let mut tmpjson = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
-        write!(tmpyaml, "{}", yaml).unwrap();
-        write!(tmpjson, "{}", json).unwrap();
+        write!(tmpyaml, "{yaml}").unwrap();
+        write!(tmpjson, "{json}").unwrap();
         let path_yaml = tmpyaml.path().to_str().unwrap().to_string();
         let path_json = tmpjson.path().to_str().unwrap().to_string();
         let rules = super::load_audit_rules_multi(&[path_yaml, path_json])
@@ -152,7 +178,7 @@ mod tests {
         // Create a temporary YAML file with a single rule
         let yaml = "- id: test\n  description: test\n  criterias:\n    and:\n      - field: name\n        operator: equals\n        value: 'TestRule'\n  severity: info\n";
         let mut tmpfile = NamedTempFile::new().unwrap();
-        write!(tmpfile, "{}", yaml).unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap().to_string();
         // Simulate firewall rules
         let fw_rules: Vec<FirewallRule> = (0..1000)
@@ -160,7 +186,7 @@ mod tests {
                 name: if i == 42 {
                     "TestRule".to_string()
                 } else {
-                    format!("Rule-{}", i)
+                    format!("Rule-{i}")
                 },
                 direction: "In".to_string(),
                 enabled: true,
@@ -186,7 +212,7 @@ mod tests {
         let mut matches_seq = Vec::new();
         for audit_rule in &audit_rules {
             for fw_rule in &fw_rules {
-                if crate::criteria::eval_criterias(fw_rule, &audit_rule.criterias) {
+                if eval_criterias(fw_rule, &audit_rule.criterias) {
                     matches_seq.push(fw_rule.name.clone());
                 }
             }
@@ -195,7 +221,7 @@ mod tests {
         let matches_par: Vec<String> = fw_rules
             .par_iter()
             .filter_map(|fw_rule| {
-                if crate::criteria::eval_criterias(fw_rule, &audit_rules[0].criterias) {
+                if eval_criterias(fw_rule, &audit_rules[0].criterias) {
                     Some(fw_rule.name.clone())
                 } else {
                     None

@@ -7,27 +7,22 @@ impl CriteriaOperator {
     pub fn expected_type(&self) -> &'static str {
         match self {
             // Any
-            CriteriaOperator::Equals | CriteriaOperator::Not | CriteriaOperator::Matches => {
-                "any (string, number, bool, list, ...)"
-            }
+            Self::Equals | Self::Not | Self::Matches => "any (string, number, bool, list, ...)",
             // String
-            CriteriaOperator::StartsWith
-            | CriteriaOperator::EndsWith
-            | CriteriaOperator::Regex
-            | CriteriaOperator::Wildcard => "string",
-            CriteriaOperator::Contains => "string",
+            Self::StartsWith
+            | Self::EndsWith
+            | Self::Regex
+            | Self::Wildcard
+            | Self::Contains
+            | Self::ApplicationExists
+            | Self::ServiceExists => "string",
             // Number
-            CriteriaOperator::InRange => "list of 2 numbers",
-            CriteriaOperator::Lt
-            | CriteriaOperator::Lte
-            | CriteriaOperator::Gt
-            | CriteriaOperator::Gte => "number",
+            Self::InRange => "list of 2 numbers",
+            Self::Lt | Self::Lte | Self::Gt | Self::Gte => "number",
             // IP/network
-            CriteriaOperator::Cidr => "string (IP or CIDR)",
+            Self::Cidr => "string (IP or CIDR)",
             // Boolean/null
-            CriteriaOperator::IsNull => "(no value)",
-            // Existence
-            CriteriaOperator::ApplicationExists | CriteriaOperator::ServiceExists => "string",
+            Self::IsNull => "(no value)",
         }
     }
 }
@@ -37,30 +32,26 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
     match expr {
         CriteriaExpr::Group { and } => {
             for (i, sub) in and.iter().enumerate() {
-                errors.extend(validate_criteria_expr(
-                    sub,
-                    &format!("{}->and[{}]", path, i),
-                ));
+                errors.extend(validate_criteria_expr(sub, &format!("{path}->and[{i}]")));
             }
         }
         CriteriaExpr::OrGroup { or } => {
             for (i, sub) in or.iter().enumerate() {
-                errors.extend(validate_criteria_expr(sub, &format!("{}->or[{}]", path, i)));
+                errors.extend(validate_criteria_expr(sub, &format!("{path}->or[{i}]")));
             }
         }
         CriteriaExpr::NotGroup { not } => {
-            errors.extend(validate_criteria_expr(not, &format!("{}->not", path)));
+            errors.extend(validate_criteria_expr(not, &format!("{path}->not")));
         }
         CriteriaExpr::Condition(cond) => {
             if !FirewallRule::valid_fields().contains(&cond.field.as_str()) {
-                errors.push(format!("Unknown field '{}' at {}", cond.field, path));
+                errors.push(format!("Unknown field '{}' at {path}", cond.field));
                 return errors;
             }
             let mut cond = cond.clone();
             cond.parse_operator();
-            let op = match cond.operator.as_ref() {
-                Some(op) => op,
-                None => return errors,
+            let Some(op) = cond.operator.as_ref() else {
+                return errors;
             };
             let val = &cond.value;
             let err = match op {
@@ -70,18 +61,14 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
                 CriteriaOperator::StartsWith
                 | CriteriaOperator::EndsWith
                 | CriteriaOperator::Regex
-                | CriteriaOperator::Wildcard => {
+                | CriteriaOperator::Wildcard
+                | CriteriaOperator::Contains
+                | CriteriaOperator::ApplicationExists
+                | CriteriaOperator::ServiceExists => {
                     if let Some(Value::String(_)) = val {
                         None
                     } else {
                         Some("must be a string")
-                    }
-                }
-                CriteriaOperator::Contains => {
-                    if let Some(Value::String(_)) = val {
-                        None
-                    } else {
-                        Some("must be a string (lists are not allowed)")
                     }
                 }
                 CriteriaOperator::InRange => {
@@ -119,18 +106,10 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
                         Some("must not have a value")
                     }
                 }
-                CriteriaOperator::ApplicationExists | CriteriaOperator::ServiceExists => {
-                    if let Some(Value::String(_)) = val {
-                        None
-                    } else {
-                        Some("must be a string")
-                    }
-                }
             };
             if let Some(msg) = err {
                 errors.push(format!(
-                    "Invalid value for operator '{:?}' at {}: {} (got {:?})",
-                    op, path, msg, val
+                    "Invalid value for operator '{op:?}' at {path}: {msg} (got {val:?})"
                 ));
             }
         }
