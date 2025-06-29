@@ -1,16 +1,22 @@
 use super::firewall_rule::{FirewallProvider, FirewallRule, FirewallRuleProvider};
-use crate::criteria::{AuditRule, eval_criterias, validate_criteria_expr};
+use crate::criteria::eval::eval_criterias;
+use crate::criteria::types::AuditRule;
+use crate::criteria::validation::validate_criteria_expr;
 use crate::error::{FirewallAuditError, Result};
 use rayon::prelude::*;
-use serde_yaml::Value;
 
-fn load_audit_rules_yaml(path: &str) -> Result<Vec<AuditRule>> {
+fn load_audit_rules_from<T, F>(path: &str, parse: F) -> Result<Vec<AuditRule>>
+where
+    F: Fn(&str) -> Result<Vec<T>>,
+    T: serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug,
+{
     let contents = std::fs::read_to_string(path).map_err(FirewallAuditError::Io)?;
-    let values: Vec<Value> =
-        serde_yaml::from_str(&contents).map_err(FirewallAuditError::YamlParse)?;
+    let values = parse(&contents)?;
     let mut rules = Vec::new();
     for (i, val) in values.into_iter().enumerate() {
-        match serde_yaml::from_value::<AuditRule>(val.clone()) {
+        // Convert value to serde_json::Value for uniform deserialization
+        let json_val = serde_json::to_value(&val).unwrap();
+        match serde_json::from_value::<AuditRule>(json_val) {
             Ok(rule) => rules.push(rule),
             Err(e) => {
                 eprintln!("Rule at index {} ignored: {} (content: {:?})", i, e, val);
@@ -20,20 +26,16 @@ fn load_audit_rules_yaml(path: &str) -> Result<Vec<AuditRule>> {
     Ok(rules)
 }
 
+fn load_audit_rules_yaml(path: &str) -> Result<Vec<AuditRule>> {
+    load_audit_rules_from(path, |c| {
+        serde_yaml::from_str::<Vec<serde_yaml::Value>>(c).map_err(FirewallAuditError::YamlParse)
+    })
+}
+
 fn load_audit_rules_json(path: &str) -> Result<Vec<AuditRule>> {
-    let contents = std::fs::read_to_string(path).map_err(FirewallAuditError::Io)?;
-    let values: Vec<serde_json::Value> =
-        serde_json::from_str(&contents).map_err(FirewallAuditError::JsonParse)?;
-    let mut rules = Vec::new();
-    for (i, val) in values.into_iter().enumerate() {
-        match serde_json::from_value::<AuditRule>(val.clone()) {
-            Ok(rule) => rules.push(rule),
-            Err(e) => {
-                eprintln!("Rule at index {} ignored: {} (content: {:?})", i, e, val);
-            }
-        }
-    }
-    Ok(rules)
+    load_audit_rules_from(path, |c| {
+        serde_json::from_str::<Vec<serde_json::Value>>(c).map_err(FirewallAuditError::JsonParse)
+    })
 }
 
 /// Charge and merge audit rules from multiple YAML/JSON files
@@ -45,23 +47,9 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
         } else if path.ends_with(".json") {
             load_audit_rules_json(path)?
         } else {
-            // Try YAML then JSON if no recognized extension
-            let try_yaml = std::fs::read_to_string(path)
-                .ok()
-                .and_then(|c| serde_yaml::from_str::<Vec<AuditRule>>(&c).ok());
-            if let Some(rules) = try_yaml {
-                rules
-            } else {
-                let try_json = std::fs::read_to_string(path)
-                    .ok()
-                    .and_then(|c| serde_json::from_str::<Vec<AuditRule>>(&c).ok());
-                if let Some(rules) = try_json {
-                    rules
-                } else {
-                    return Err(FirewallAuditError::UnsupportedFileFormat { path: path.clone() });
-                }
-            }
+            return Err(FirewallAuditError::UnsupportedFileFormat { path: path.clone() });
         };
+
         // Validation: filter out invalid rules and print errors
         let mut valid_rules = Vec::new();
         for rule in rules {
@@ -146,8 +134,8 @@ mod tests {
         let json = r#"[
             {"id": "test2", "description": "desc", "criterias": {"and": [{"field": "name", "operator": "equals", "value": "TestRule"}]}, "severity": "info"}
         ]"#;
-        let mut tmpyaml = NamedTempFile::new().unwrap();
-        let mut tmpjson = NamedTempFile::new().unwrap();
+        let mut tmpyaml = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
+        let mut tmpjson = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
         write!(tmpyaml, "{}", yaml).unwrap();
         write!(tmpjson, "{}", json).unwrap();
         let path_yaml = tmpyaml.path().to_str().unwrap().to_string();

@@ -1,3 +1,5 @@
+use struct_field_names_as_array::FieldNamesAsSlice;
+
 use crate::error::{FirewallAuditError, Result};
 use std::collections::HashSet;
 use std::net::IpAddr;
@@ -5,7 +7,7 @@ use std::net::IpAddr;
 pub mod linux;
 pub mod windows;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FieldNamesAsSlice)]
 pub struct FirewallRule {
     pub name: String,
     pub direction: String,
@@ -25,6 +27,12 @@ pub struct FirewallRule {
     pub grouping: Option<String>,
     pub profiles: Option<String>,
     pub edge_traversal: Option<bool>,
+}
+
+impl FirewallRule {
+    pub fn valid_fields() -> &'static [&'static str] {
+        Self::FIELD_NAMES_AS_SLICE
+    }
 }
 
 pub trait FirewallRuleProvider {

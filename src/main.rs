@@ -18,13 +18,13 @@ EXAMPLES :
     firewall_audit --criteria rules.yaml --export json --output result.json
 ")]
 pub struct Cli {
-    /// Fichiers de critères d'audit (YAML ou JSON)
+    /// Audit criteria files (YAML or JSON)
     #[arg(short, long, required = true)]
     criteria: Vec<String>,
-    /// Format d'export (csv, html, json)
+    /// Export format (csv, html, json)
     #[arg(short, long, value_enum)]
     export: Option<ExportFmt>,
-    /// Fichier de sortie (sinon affiche dans la console)
+    /// Output file (otherwise displayed in console)
     #[arg(short, long)]
     output: Option<String>,
 }
@@ -39,7 +39,6 @@ pub enum ExportFmt {
 fn main() {
     let cli = Cli::parse();
 
-    // Charger et valider les règles
     let audit_rules = match firewall_audit::load_audit_rules_multi(&cli.criteria) {
         Ok(rules) => {
             println!("Loaded {} audit rules.", rules.len());
@@ -51,7 +50,6 @@ fn main() {
         }
     };
 
-    // Exécuter l'audit
     let output = match firewall_audit::run_audit_multi(&audit_rules) {
         Ok(output) => output,
         Err(e) => {
@@ -98,7 +96,7 @@ fn main() {
             print!("{}", append_console_explanation(&output));
         }
     }
-    // Only print the summary line in the console for all export modes
+
     let summary = firewall_audit::export::append_console_explanation(&output);
     if let Some(ExportFmt::Csv) | Some(ExportFmt::Html) | Some(ExportFmt::Json) = cli.export {
         if let Some(line) = summary.lines().find(|l| l.contains("problem(s) detected")) {

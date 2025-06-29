@@ -12,7 +12,10 @@ serde_yaml = "0.9"
 tempfile = "3"
 clap = { version = "4", features = ["derive"] }
 rayon = "1"
-thiserror = "1.0"
+thiserror = "2.0"
+struct-field-names-as-array = "0.3"
+strum = "0.27"
+strum_macros = "0.27"
 
 [target.'cfg(windows)'.dependencies]
 windows_firewall = "0.1"
