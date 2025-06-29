@@ -116,3 +116,52 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
     }
     errors
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::criteria::types::{CriteriaCondition, CriteriaExpr};
+    use serde_yaml::Value;
+
+    #[test]
+    fn test_validate_criteria_expr_unknown_field() {
+        let cond = CriteriaCondition {
+            field: "notafield".to_string(),
+            operator_raw: "equals".to_string(),
+            value: Some(Value::String("foo".to_string())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, "root");
+        assert!(errors.iter().any(|e| e.contains("Unknown field")));
+    }
+
+    #[test]
+    fn test_validate_criteria_expr_wrong_type() {
+        let cond = CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "in_range".to_string(),
+            value: Some(Value::String("notalist".to_string())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, "root");
+        assert!(errors
+            .iter()
+            .any(|e| e.contains("must be a list of 2 numbers")));
+    }
+
+    #[test]
+    fn test_validate_criteria_expr_unknown_operator() {
+        let cond = CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "notanop".to_string(),
+            value: Some(Value::String("foo".to_string())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, "root");
+        // Pas d'opérateur => pas d'erreur de type, mais la règle sera ignorée au runtime
+        assert!(errors.is_empty());
+    }
+}

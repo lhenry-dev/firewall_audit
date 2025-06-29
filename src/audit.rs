@@ -251,4 +251,58 @@ mod tests {
             .collect();
         assert_eq!(matches_seq, matches_par);
     }
+
+    #[test]
+    fn test_load_audit_rules_yaml_invalid_syntax() {
+        let yaml = "- id: test\n  description: test\n  criterias: [INVALID\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap();
+        let res = super::load_audit_rules_yaml(path);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_load_audit_rules_json_invalid_syntax() {
+        let json = r#"[{\"id\": \"test\", \"description\": \"desc\", \"criterias\": {and: [}}]"#;
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{json}").unwrap();
+        let path = tmpfile.path().to_str().unwrap();
+        let res = super::load_audit_rules_json(path);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_load_audit_rules_yaml_missing_field() {
+        let yaml = "- description: test\n  criterias:\n    and:\n      - field: name\n        operator: equals\n        value: 'TestRule'\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap();
+        let res = super::load_audit_rules_yaml(path);
+        // id manquant => erreur ou règle ignorée
+        assert!(res.is_ok());
+        let rules = res.unwrap();
+        assert!(rules.is_empty() || rules.iter().all(|r| !r.id.is_empty()));
+    }
+
+    #[test]
+    fn test_load_audit_rules_yaml_unknown_operator() {
+        let yaml = "- id: test\n  description: test\n  criterias:\n    and:\n      - field: name\n        operator: unknownop\n        value: 'TestRule'\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap();
+        let res = super::load_audit_rules_yaml(path);
+        assert!(res.is_ok());
+        let rules = res.unwrap();
+        // La règle est chargée, mais son opérateur doit être None
+        assert!(rules.iter().any(|r| r.id == "test"));
+        let rule = rules.iter().find(|r| r.id == "test").unwrap();
+        if let crate::criteria::types::CriteriaExpr::Group { and } = &rule.criterias {
+            for expr in and {
+                if let crate::criteria::types::CriteriaExpr::Condition(cond) = expr {
+                    assert!(cond.operator.is_none());
+                }
+            }
+        }
+    }
 }
