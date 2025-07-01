@@ -56,10 +56,6 @@ pub fn get_field_value(rule: &FirewallRule, field: &str) -> Option<Value> {
     }
 }
 
-fn value_is_null(val: Option<&Value>) -> bool {
-    matches!(val, None | Some(Value::Null))
-}
-
 fn eval_equals(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
     if let (Some(Value::String(s)), Some(Value::String(expected))) = (field_val, cond_val) {
         s.eq_ignore_ascii_case(expected)
@@ -205,7 +201,7 @@ fn eval_cidr(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
 }
 
 fn eval_is_null(field_val: Option<&Value>) -> bool {
-    value_is_null(field_val)
+    matches!(field_val, None | Some(Value::Null))
 }
 
 fn eval_application_exists(field_val: Option<&Value>) -> bool {
@@ -229,7 +225,19 @@ fn eval_service_exists(field_val: Option<&Value>) -> bool {
                 false
             }
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "linux")]
+        {
+            let output = Command::new("systemctl")
+                .arg("status")
+                .arg(service)
+                .output();
+            if let Ok(out) = output {
+                out.status.success()
+            } else {
+                false
+            }
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         {
             false
         }

@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  # schedule: [cron: "40 1 * * 1"] # every Monday at 01:40 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  # check:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, ubuntu-latest]
+  #       toolchain: [stable, beta, nightly]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: ${{matrix.toolchain}}
+  #     - name: No features
+  #       run: cargo check --no-default-features
+  #     - name: All features
+  #       run: cargo check --all-features
+  #     - name: Examples
+  #       run: cargo check --examples
+
+  # test:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, ubuntu-latest]
+  #       toolchain: [stable, beta, nightly]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: ${{matrix.toolchain}}
+  #     - name: Run tests
+  #       run : cargo test --all-features -- --nocapture
+
+  # fmt:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, ubuntu-latest]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - run: cargo fmt --all -- --check
+
+  # clippy:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, ubuntu-latest]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - run: cargo clippy --all-features -- -D warnings -D clippy::expect_used -D clippy::panic -D clippy::unwrap_used
+
+  # doc:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, ubuntu-latest]
+  #   env:
+  #     RUSTDOCFLAGS: -D warnings
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - run: cargo doc --all-features --no-deps --document-private-items
+
+  # audit:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - name: Install tool
+  #       run: cargo install cargo-audit
+  #     - name: Run cargo audit
+  #       run: cargo audit
+
+  # machete:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - name: Install tool
+  #       run: cargo install cargo-machete
+  #     - name: Run cargo machete
+  #       run: cargo machete
+
+  # sort:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - name: Install tool
+  #       run: cargo install cargo-sort
+  #     - name: Run cargo sort
+  #       run: cargo sort
+
+  linux-firewall-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run Linux firewall rule test
+        run: cargo test test_list_rules_compiles -- --nocapture
+
+  # msrv:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - name: Install cargo-msrv
+  #       run: cargo install cargo-msrv
+  #     - name: Verify Minimum Supported Rust Version
+  #       run: cargo msrv verify

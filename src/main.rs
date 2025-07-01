@@ -4,7 +4,7 @@
 //!
 //! # Example
 //! ```sh
-//! firewall_audit --rules rules.yaml --export csv --output result.csv
+//! firewall_audit --rules rules.yaml --export html --output result.html
 //! ```
 
 use clap::{Parser, ValueEnum};
@@ -25,12 +25,12 @@ enum ExportFormat {
 #[command(author, version, about = "Cross-platform firewall audit tool (CSV/HTML/JSON export)", long_about = None)]
 struct Cli {
     /// Path to the rules file (YAML or JSON)
-    #[arg(short, long, required = true)]
+    #[arg(short, long)]
     rules: String,
 
     /// Export format (csv, html, json)
-    #[arg(short, long, value_enum, default_value = "csv")]
-    export: ExportFormat,
+    #[arg(short, long, value_enum)]
+    export: Option<ExportFormat>,
 
     /// Output file (if not set, print to stdout)
     #[arg(short, long)]
@@ -60,29 +60,51 @@ fn main() {
         error!("Error running audit: {}", e);
         process::exit(1);
     });
-    let summary = firewall_audit::audit_summary_phrase(&audit_output);
-    if cli.output.is_none() {
-        info!("{}", audit_output);
-    } else {
-        let output_path = cli.output.as_deref();
-        let result = match cli.export {
-            ExportFormat::Csv => export_csv(&audit_output, output_path).map_err(|e| e.to_string()),
-            ExportFormat::Html => {
-                export_html(&audit_output, output_path).map_err(|e| e.to_string())
+
+    let output_path = match (&cli.output, &cli.export) {
+        (None, Some(fmt)) => Some({
+            let ext = match fmt {
+                ExportFormat::Csv => "csv",
+                ExportFormat::Html => "html",
+                ExportFormat::Json => "json",
+            };
+
+            format!(
+                "firewall_audit_{}.{}",
+                chrono::Utc::now().format("%Y%m%d_%H%M%S"),
+                ext
+            )
+        }),
+        _ => None,
+    };
+
+    match (&output_path, &cli.export) {
+        (Some(output_path), Some(fmt)) => {
+            let result = match fmt {
+                ExportFormat::Csv => {
+                    export_csv(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                }
+                ExportFormat::Html => {
+                    export_html(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                }
+                ExportFormat::Json => {
+                    export_json(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                }
+            };
+            match result {
+                Ok(_) => info!("Export successful to {}", output_path),
+                Err(e) => {
+                    error!("Export error: {}", e);
+                    process::exit(1);
+                }
             }
-            ExportFormat::Json => {
-                export_json(&audit_output, output_path).map_err(|e| e.to_string())
-            }
-        };
-        match result {
-            Ok(_) => info!("Export successful to {}", output_path.unwrap_or("Unknown")),
-            Err(e) => {
-                error!("Export error: {}", e);
-                process::exit(1);
-            }
+        }
+        _ => {
+            info!("{}", audit_output);
         }
     }
 
+    let summary = firewall_audit::audit_summary_phrase(&audit_output);
     println!();
     info!("{summary}");
 }

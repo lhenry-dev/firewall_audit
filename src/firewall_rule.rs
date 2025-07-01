@@ -4,7 +4,9 @@ use crate::error::{FirewallAuditError, Result};
 use std::collections::HashSet;
 use std::net::IpAddr;
 
+#[cfg(target_os = "linux")]
 pub mod linux;
+#[cfg(target_os = "windows")]
 pub mod windows;
 
 /// Represents a firewall rule (cross-platform abstraction).
@@ -80,13 +82,12 @@ mod platform {
 
 #[cfg(target_os = "linux")]
 mod platform {
-    use super::{FirewallAuditError, FirewallRule, FirewallRuleProvider, Result};
-    pub struct LinuxFirewallProvider;
-    impl FirewallRuleProvider for LinuxFirewallProvider {
+    use super::{FirewallRule, FirewallRuleProvider, Result};
+    use crate::firewall_rule::linux::LinuxFirewallProvider;
+    pub struct PlatformLinuxFirewallProvider;
+    impl FirewallRuleProvider for PlatformLinuxFirewallProvider {
         fn list_rules() -> Result<Vec<FirewallRule>> {
-            Err(FirewallAuditError::ValidationError(
-                "Firewall rule listing is not implemented on Linux".to_string(),
-            ))
+            LinuxFirewallProvider::list_rules()
         }
     }
 }
@@ -98,11 +99,27 @@ mod tests {
     fn test_list_rules_compiles() {
         #[cfg(target_os = "windows")]
         {
-            let _rules = crate::firewall_rule::platform::WindowsFirewallProvider::list_rules();
+            let rules = crate::firewall_rule::platform::WindowsFirewallProvider::list_rules();
+            match rules {
+                Ok(rules) => {
+                    for rule in rules {
+                        println!("{:?}", rule);
+                    }
+                }
+                Err(e) => println!("Error: {:?}", e),
+            }
         }
         #[cfg(target_os = "linux")]
         {
-            let _rules = crate::firewall_rule::platform::LinuxFirewallProvider::list_rules();
+            let rules = crate::firewall_rule::platform::PlatformLinuxFirewallProvider::list_rules();
+            match rules {
+                Ok(rules) => {
+                    for rule in rules {
+                        println!("{:?}", rule);
+                    }
+                }
+                Err(e) => println!("Error: {:?}", e),
+            }
         }
     }
 }
