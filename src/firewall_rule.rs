@@ -12,6 +12,8 @@ pub mod windows;
 /// Represents a firewall rule (cross-platform abstraction).
 #[derive(Debug, Clone, FieldNamesAsSlice)]
 pub struct FirewallRule {
+    /// OS of rule origin (ex: "linux", "windows")
+    pub os: Option<String>,
     /// Rule name
     pub name: String,
     /// Rule direction (In/Out)
@@ -22,31 +24,31 @@ pub struct FirewallRule {
     pub action: String,
     /// Description
     pub description: Option<String>,
-    /// Application name (if any)
+    /// Application name
     pub application_name: Option<String>,
-    /// Service name (if any)
+    /// Service name
     pub service_name: Option<String>,
-    /// Protocol (if any)
+    /// Protocol
     pub protocol: Option<String>,
-    /// Local ports (if any)
+    /// Local ports
     pub local_ports: Option<HashSet<u16>>,
-    /// Remote ports (if any)
+    /// Remote ports
     pub remote_ports: Option<HashSet<u16>>,
-    /// Local addresses (if any)
+    /// Local addresses
     pub local_addresses: Option<HashSet<IpAddr>>,
-    /// Remote addresses (if any)
+    /// Remote addresses
     pub remote_addresses: Option<HashSet<IpAddr>>,
-    /// ICMP types and codes (if any)
+    /// ICMP types and codes
     pub icmp_types_and_codes: Option<String>,
-    /// Interfaces (if any)
+    /// Interfaces
     pub interfaces: Option<HashSet<String>>,
-    /// Interface types (if any)
+    /// Interface types
     pub interface_types: Option<HashSet<String>>,
-    /// Grouping (if any)
+    /// Grouping
     pub grouping: Option<String>,
-    /// Profiles (if any)
+    /// Profiles
     pub profiles: Option<String>,
-    /// Edge traversal (if any)
+    /// Edge traversal
     pub edge_traversal: Option<bool>,
 }
 

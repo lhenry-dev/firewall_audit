@@ -111,6 +111,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
         };
 
         FirewallRule {
+            os: Some("linux".to_string()),
             name: tokens
                 .get(1)
                 .map(|s| s.as_str())

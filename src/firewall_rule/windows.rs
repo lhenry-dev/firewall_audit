@@ -16,6 +16,7 @@ impl FirewallRuleProvider for WindowsFirewallProvider {
 impl From<&WindowsFirewallRule> for FirewallRule {
     fn from(rule: &WindowsFirewallRule) -> Self {
         Self {
+            os: Some("windows".to_string()),
             name: rule.name().to_string(),
             direction: format!("{:?}", rule.direction()),
             enabled: rule.enabled(),

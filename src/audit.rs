@@ -89,7 +89,16 @@ pub fn load_audit_rules_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
         };
         // Validation: filter out invalid rules and print errors
         let mut valid_rules = Vec::new();
+        let current_os = std::env::consts::OS;
         for rule in rules {
+            let applies = match &rule.os {
+                None => true,
+                Some(list) if list.is_empty() => true,
+                Some(list) => list.iter().any(|os| os.eq_ignore_ascii_case(current_os)),
+            };
+            if !applies {
+                continue;
+            }
             let errors =
                 validate_criteria_expr(&rule.criterias, &format!("rule '{}':root", rule.id));
             if errors.is_empty() {
@@ -123,6 +132,14 @@ pub fn run_audit_multi(audit_rules: &[AuditRule]) -> Result<String> {
     for audit_rule in audit_rules {
         let matches: Vec<String> = firewall_rules
             .par_iter()
+            .filter(|fw_rule| match &audit_rule.os {
+                Some(os_list) if !os_list.is_empty() => fw_rule
+                    .os
+                    .as_ref()
+                    .map(|os| os_list.iter().any(|o| o.eq_ignore_ascii_case(os)))
+                    .unwrap_or(false),
+                _ => true,
+            })
             .filter_map(|fw_rule| {
                 if eval_criterias(fw_rule, &audit_rule.criterias) {
                     Some(fw_rule.name.clone())
@@ -147,6 +164,8 @@ pub fn run_audit_multi(audit_rules: &[AuditRule]) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::{CriteriaCondition, CriteriaExpr};
+
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
@@ -226,6 +245,7 @@ mod tests {
                 grouping: None,
                 profiles: None,
                 edge_traversal: None,
+                os: Some("windows".to_string()),
             })
             .collect();
         // Sequential audit
@@ -304,5 +324,215 @@ mod tests {
                 }
             }
         }
+    }
+
+    fn fw_linux() -> FirewallRule {
+        FirewallRule {
+            name: "rule1".to_string(),
+            direction: "In".to_string(),
+            enabled: true,
+            action: "Allow".to_string(),
+            description: None,
+            application_name: None,
+            service_name: None,
+            protocol: None,
+            local_ports: None,
+            remote_ports: None,
+            local_addresses: None,
+            remote_addresses: None,
+            icmp_types_and_codes: None,
+            interfaces: None,
+            interface_types: None,
+            grouping: None,
+            profiles: None,
+            edge_traversal: None,
+            os: Some("linux".to_string()),
+        }
+    }
+    fn fw_windows() -> FirewallRule {
+        FirewallRule {
+            name: "rule2".to_string(),
+            direction: "In".to_string(),
+            enabled: true,
+            action: "Allow".to_string(),
+            description: None,
+            application_name: None,
+            service_name: None,
+            protocol: None,
+            local_ports: None,
+            remote_ports: None,
+            local_addresses: None,
+            remote_addresses: None,
+            icmp_types_and_codes: None,
+            interfaces: None,
+            interface_types: None,
+            grouping: None,
+            profiles: None,
+            edge_traversal: None,
+            os: Some("windows".to_string()),
+        }
+    }
+    fn fw_no_os() -> FirewallRule {
+        FirewallRule {
+            name: "rule3".to_string(),
+            direction: "In".to_string(),
+            enabled: true,
+            action: "Allow".to_string(),
+            description: None,
+            application_name: None,
+            service_name: None,
+            protocol: None,
+            local_ports: None,
+            remote_ports: None,
+            local_addresses: None,
+            remote_addresses: None,
+            icmp_types_and_codes: None,
+            interfaces: None,
+            interface_types: None,
+            grouping: None,
+            profiles: None,
+            edge_traversal: None,
+            os: None,
+        }
+    }
+
+    #[test]
+    fn test_os_filtering_linux_only() {
+        let fw_rules = vec![fw_linux(), fw_windows(), fw_no_os()];
+        let audit_rule_linux = AuditRule {
+            id: "linux_only".to_string(),
+            description: "Linux only".to_string(),
+            criterias: CriteriaExpr::Condition(CriteriaCondition {
+                field: "name".to_string(),
+                operator_raw: "equals".to_string(),
+                value: Some(serde_yaml::Value::String("rule1".to_string())),
+                operator: None,
+            }),
+            severity: "info".to_string(),
+            os: Some(vec!["linux".to_string()]),
+        };
+        let matches: Vec<String> = fw_rules
+            .iter()
+            .filter(|fw_rule| match &audit_rule_linux.os {
+                Some(os_list) if !os_list.is_empty() => match &fw_rule.os {
+                    Some(os) => os_list.iter().any(|o| o.eq_ignore_ascii_case(os)),
+                    None => false,
+                },
+                _ => true,
+            })
+            .filter_map(|fw_rule| {
+                if fw_rule.name == "rule1" {
+                    Some(fw_rule.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(matches, vec!["rule1"]);
+    }
+
+    #[test]
+    fn test_os_filtering_windows_only() {
+        let fw_rules = vec![fw_linux(), fw_windows(), fw_no_os()];
+        let audit_rule_windows = AuditRule {
+            id: "windows_only".to_string(),
+            description: "Windows only".to_string(),
+            criterias: CriteriaExpr::Condition(CriteriaCondition {
+                field: "name".to_string(),
+                operator_raw: "equals".to_string(),
+                value: Some(serde_yaml::Value::String("rule2".to_string())),
+                operator: None,
+            }),
+            severity: "info".to_string(),
+            os: Some(vec!["windows".to_string()]),
+        };
+        let matches: Vec<String> = fw_rules
+            .iter()
+            .filter(|fw_rule| match &audit_rule_windows.os {
+                Some(os_list) if !os_list.is_empty() => match &fw_rule.os {
+                    Some(os) => os_list.iter().any(|o| o.eq_ignore_ascii_case(os)),
+                    None => false,
+                },
+                _ => true,
+            })
+            .filter_map(|fw_rule| {
+                if fw_rule.name == "rule2" {
+                    Some(fw_rule.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(matches, vec!["rule2"]);
+    }
+
+    #[test]
+    fn test_os_filtering_linux_and_windows() {
+        let fw_rules = vec![fw_linux(), fw_windows(), fw_no_os()];
+        let audit_rule_both = AuditRule {
+            id: "both".to_string(),
+            description: "Linux and Windows".to_string(),
+            criterias: CriteriaExpr::Condition(CriteriaCondition {
+                field: "name".to_string(),
+                operator_raw: "equals".to_string(),
+                value: Some(serde_yaml::Value::String("rule1".to_string())),
+                operator: None,
+            }),
+            severity: "info".to_string(),
+            os: Some(vec!["linux".to_string(), "windows".to_string()]),
+        };
+        let matches: Vec<String> = fw_rules
+            .iter()
+            .filter(|fw_rule| match &audit_rule_both.os {
+                Some(os_list) if !os_list.is_empty() => match &fw_rule.os {
+                    Some(os) => os_list.iter().any(|o| o.eq_ignore_ascii_case(os)),
+                    None => false,
+                },
+                _ => true,
+            })
+            .filter_map(|fw_rule| {
+                if fw_rule.name == "rule1" {
+                    Some(fw_rule.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(matches, vec!["rule1"]); // rule2 n'est pas dans le critère de name
+    }
+
+    #[test]
+    fn test_os_filtering_firewall_no_os() {
+        let fw_rules = vec![fw_linux(), fw_windows(), fw_no_os()];
+        let audit_rule_all = AuditRule {
+            id: "all".to_string(),
+            description: "All OS".to_string(),
+            criterias: CriteriaExpr::Condition(CriteriaCondition {
+                field: "name".to_string(),
+                operator_raw: "equals".to_string(),
+                value: Some(serde_yaml::Value::String("rule3".to_string())),
+                operator: None,
+            }),
+            severity: "info".to_string(),
+            os: None,
+        };
+        let matches: Vec<String> = fw_rules
+            .iter()
+            .filter(|fw_rule| match &audit_rule_all.os {
+                Some(os_list) if !os_list.is_empty() => match &fw_rule.os {
+                    Some(os) => os_list.iter().any(|o| o.eq_ignore_ascii_case(os)),
+                    None => false,
+                },
+                _ => true,
+            })
+            .filter_map(|fw_rule| {
+                if fw_rule.name == "rule3" {
+                    Some(fw_rule.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(matches, vec!["rule3"]);
     }
 }
