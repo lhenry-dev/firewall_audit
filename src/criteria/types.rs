@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
 /// Represents a single audit rule loaded from a YAML or JSON file.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct AuditRule {
     /// Unique identifier for the rule
     pub id: String,

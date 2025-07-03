@@ -2,22 +2,26 @@
 //!
 //! Provides a function to append a summary message to the audit output for console display.
 
-use crate::export::block::{count_by_severity, parse_audit_blocks};
+use crate::audit::run::AuditMatch;
 
 /// Returns a summary phrase for the audit output (for console display).
 ///
 /// # Arguments
-/// * `audit_output` - The audit result as a string (from the audit engine)
+/// * `audit_results` - The audit results as a vector of AuditMatch
 ///
 /// # Returns
 /// * `String` - The summary phrase (e.g., "X problem(s) detected..." or "No problem detected...")
-pub fn audit_summary_phrase(audit_output: &str) -> String {
-    let blocks = parse_audit_blocks(audit_output);
-    let filtered: Vec<_> = blocks
-        .iter()
-        .filter(|b| !b.no_match && !b.matches.is_empty())
-        .collect();
-    let (high, medium, low, info) = count_by_severity(filtered.iter().copied());
+pub fn audit_summary_phrase(audit_results: &[AuditMatch]) -> String {
+    let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
+        match a.severity.to_lowercase().as_str() {
+            "high" => acc.0 += 1,
+            "medium" => acc.1 += 1,
+            "low" => acc.2 += 1,
+            "info" => acc.3 += 1,
+            _ => {}
+        }
+        acc
+    });
     let total = high + medium + low + info;
     if total > 0 {
         format!(
@@ -31,36 +35,34 @@ pub fn audit_summary_phrase(audit_output: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const AUDIT_SAMPLE: &str = r"
-Audit Rule: test-high
-Description: Critical
-Severity: high
-  ✅ 2 match(es) found:
-    - Rule1
-    - Rule2
-Audit Rule: test-info
-Description: Info
-Severity: info
-  ✅ 1 match(es) found:
-    - Rule3
-Audit Rule: test-nomatch
-Description: No match
-Severity: low
-  ❌ no firewall rule matches this audit rule
---- Audit End ---
-";
+    use crate::audit::run::AuditMatch;
 
     #[test]
     fn test_audit_summary_phrase() {
-        let summary = audit_summary_phrase(AUDIT_SAMPLE);
+        let audit_results = vec![
+            AuditMatch {
+                rule_id: "test-high".to_string(),
+                description: "Critical".to_string(),
+                severity: "high".to_string(),
+                matched_firewall_rules: vec!["Rule1".to_string(), "Rule2".to_string()],
+            },
+            AuditMatch {
+                rule_id: "test-info".to_string(),
+                description: "Info".to_string(),
+                severity: "info".to_string(),
+                matched_firewall_rules: vec!["Rule3".to_string()],
+            },
+        ];
+        let summary = audit_summary_phrase(&audit_results);
         assert!(summary.contains("problem(s) detected"));
         assert!(summary.contains("1 critical(s)"));
         assert!(summary.contains("1 informational(s)"));
     }
+
     #[test]
     fn test_audit_summary_phrase_no_problem() {
-        let no_match = "--- Audit End ---\n";
-        let summary = audit_summary_phrase(no_match);
+        let audit_results: Vec<AuditMatch> = vec![];
+        let summary = audit_summary_phrase(&audit_results);
         assert_eq!(
             summary,
             "No problem detected according to the audit criteria."

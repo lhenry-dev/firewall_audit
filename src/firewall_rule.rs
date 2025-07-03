@@ -59,20 +59,18 @@ impl FirewallRule {
     }
 }
 
+/// A trait for types that can provide firewall rules.
 pub trait FirewallRuleProvider {
+    /// Lists all firewall rules available from this provider.
     fn list_rules() -> Result<Vec<FirewallRule>>;
 }
 
 #[cfg(target_os = "windows")]
-pub use crate::firewall_rule::windows::WindowsFirewallProvider as FirewallProvider;
-
-#[cfg(target_os = "linux")]
-pub use crate::firewall_rule::linux::LinuxFirewallProvider as FirewallProvider;
-
-#[cfg(target_os = "windows")]
-mod platform {
-    use super::{FirewallAuditError, FirewallRule, FirewallRuleProvider, Result};
+pub mod platform {
+    /// Windows implementation of the firewall rule provider.
+    #[derive(Debug)]
     pub struct WindowsFirewallProvider;
+    use super::{FirewallAuditError, FirewallRule, FirewallRuleProvider, Result};
     impl FirewallRuleProvider for WindowsFirewallProvider {
         fn list_rules() -> Result<Vec<FirewallRule>> {
             windows_firewall::list_rules()
@@ -81,6 +79,12 @@ mod platform {
         }
     }
 }
+
+#[cfg(target_os = "windows")]
+pub use crate::firewall_rule::platform::WindowsFirewallProvider as FirewallProvider;
+
+#[cfg(target_os = "linux")]
+pub use crate::firewall_rule::linux::LinuxFirewallProvider as FirewallProvider;
 
 #[cfg(target_os = "linux")]
 mod platform {

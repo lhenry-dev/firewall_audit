@@ -2,8 +2,8 @@
 //!
 //! Provides a function to export audit results to JSON format.
 
+use crate::audit::run::AuditMatch;
 use crate::error::FirewallAuditError;
-use crate::export::block::{count_by_severity, parse_audit_blocks};
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
@@ -45,10 +45,10 @@ pub struct JsonAuditResult {
     pub results: Vec<JsonAuditBlock>,
 }
 
-/// Export the audit result (String) to JSON format in a file or return the JSON as a String.
+/// Export the audit result (Vec<AuditMatch>) to JSON format in a file or return the JSON as a String.
 ///
 /// # Arguments
-/// * `audit_output` - The audit result as a string (from the audit engine)
+/// * `audit_results` - The audit results as a vector of AuditMatch
 /// * `path` - Optional output file path. If None, returns the JSON as a String.
 ///
 /// # Returns
@@ -57,21 +57,28 @@ pub struct JsonAuditResult {
 ///
 /// # Errors
 /// Returns an error if writing to the file or serializing fails.
-pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, FirewallAuditError> {
-    let blocks = parse_audit_blocks(audit_output);
-    let filtered: Vec<_> = blocks
-        .into_iter()
-        .filter(|b| !b.no_match && !b.matches.is_empty())
-        .collect();
-    let (high, medium, low, info) = count_by_severity(filtered.iter());
+pub fn export_json(
+    audit_results: &[AuditMatch],
+    path: Option<&str>,
+) -> Result<String, FirewallAuditError> {
+    let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
+        match a.severity.to_lowercase().as_str() {
+            "high" => acc.0 += 1,
+            "medium" => acc.1 += 1,
+            "low" => acc.2 += 1,
+            "info" => acc.3 += 1,
+            _ => {}
+        }
+        acc
+    });
     let total = high + medium + low + info;
-    let json_blocks: Vec<JsonAuditBlock> = filtered
-        .into_iter()
-        .map(|b| JsonAuditBlock {
-            id: b.id,
-            description: b.description,
-            severity: b.severity,
-            matches: b.matches,
+    let json_blocks: Vec<JsonAuditBlock> = audit_results
+        .iter()
+        .map(|a| JsonAuditBlock {
+            id: a.rule_id.clone(),
+            description: a.description.clone(),
+            severity: a.severity.clone(),
+            matches: a.matched_firewall_rules.clone(),
         })
         .collect();
     let summary = JsonAuditSummary {
@@ -98,28 +105,25 @@ pub fn export_json(audit_output: &str, path: Option<&str>) -> Result<String, Fir
 #[cfg(test)]
 mod tests {
     use super::*;
-    const AUDIT_SAMPLE: &str = r"
-Audit Rule: test-high
-Description: Critical
-Severity: high
-  ✅ 2 match(es) found:
-    - Rule1
-    - Rule2
-Audit Rule: test-info
-Description: Info
-Severity: info
-  ✅ 1 match(es) found:
-    - Rule3
-Audit Rule: test-nomatch
-Description: No match
-Severity: low
-  ❌ no firewall rule matches this audit rule
---- Audit End ---
-";
+    use crate::audit::run::AuditMatch;
 
     #[test]
     fn test_export_json_format() {
-        let json = export_json(AUDIT_SAMPLE, None).unwrap();
+        let audit_results = vec![
+            AuditMatch {
+                rule_id: "test-high".to_string(),
+                description: "Critical".to_string(),
+                severity: "high".to_string(),
+                matched_firewall_rules: vec!["Rule1".to_string(), "Rule2".to_string()],
+            },
+            AuditMatch {
+                rule_id: "test-info".to_string(),
+                description: "Info".to_string(),
+                severity: "info".to_string(),
+                matched_firewall_rules: vec!["Rule3".to_string()],
+            },
+        ];
+        let json = export_json(&audit_results, None).unwrap();
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert!(v.get("summary").is_some());
         assert!(v.get("results").is_some());

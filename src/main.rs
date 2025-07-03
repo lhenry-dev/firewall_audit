@@ -8,7 +8,7 @@
 //! ```
 
 use clap::{Parser, ValueEnum};
-use firewall_audit::{export_csv, export_html, export_json};
+use firewall_audit::{export_csv, export_html, export_json, FirewallRuleProvider};
 use std::process;
 use tracing::{error, info};
 
@@ -56,10 +56,15 @@ fn main() {
         process::exit(1);
     }
 
-    let audit_output = firewall_audit::run_audit_multi(&audit_rules).unwrap_or_else(|e| {
-        error!("Error running audit: {}", e);
+    // Load firewall rules
+    let firewall_rules = firewall_audit::FirewallProvider::list_rules().unwrap_or_else(|e| {
+        error!("Error loading firewall rules: {}", e);
         process::exit(1);
     });
+    info!("Loaded {} firewall rule(s).", firewall_rules.len());
+
+    // Run the audit and get structured results
+    let audit_results = firewall_audit::run_audit_multi_with_rules(&audit_rules, &firewall_rules);
 
     let output_path = match (&cli.output, &cli.export) {
         (None, Some(fmt)) => Some({
@@ -75,20 +80,20 @@ fn main() {
                 ext
             )
         }),
-        _ => None,
+        _ => cli.output,
     };
 
     match (&output_path, &cli.export) {
         (Some(output_path), Some(fmt)) => {
             let result = match fmt {
                 ExportFormat::Csv => {
-                    export_csv(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                    export_csv(&audit_results, Some(output_path)).map_err(|e| e.to_string())
                 }
                 ExportFormat::Html => {
-                    export_html(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                    export_html(&audit_results, Some(output_path)).map_err(|e| e.to_string())
                 }
                 ExportFormat::Json => {
-                    export_json(&audit_output, Some(output_path)).map_err(|e| e.to_string())
+                    export_json(&audit_results, Some(output_path)).map_err(|e| e.to_string())
                 }
             };
             match result {
@@ -100,11 +105,11 @@ fn main() {
             }
         }
         _ => {
-            info!("{}", audit_output);
+            println!("{}", firewall_audit::export_text(&audit_results));
         }
     }
 
-    let summary = firewall_audit::audit_summary_phrase(&audit_output);
+    let summary = firewall_audit::audit_summary_phrase(&audit_results);
     println!();
     info!("{summary}");
 }
