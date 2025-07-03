@@ -23,7 +23,9 @@ mod error;
 mod export;
 mod firewall_rule;
 
-pub use audit::{load_audit_rules_multi, run_audit_multi};
+pub use audit::{
+    load_audit_rules_json, load_audit_rules_multi, load_audit_rules_yaml, run_audit_multi,
+};
 pub use criteria::{AuditRule, CriteriaCondition, CriteriaExpr, CriteriaOperator};
 pub use error::{FirewallAuditError, Result};
 pub use export::{

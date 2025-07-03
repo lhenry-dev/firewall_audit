@@ -95,7 +95,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
             i += 1;
         }
 
-        // Détection direction
+        // Direction detection
         if line.contains("INPUT") {
             direction = "In".to_string();
         } else if line.contains("OUTPUT") {
@@ -128,7 +128,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
             remote_ports,
             local_addresses,
             remote_addresses,
-            icmp_types_and_codes: None, // à parser si besoin
+            icmp_types_and_codes: None, // parse if needed
             interfaces,
             interface_types: None,
             grouping: None,

@@ -12,7 +12,7 @@ pub mod windows;
 /// Represents a firewall rule (cross-platform abstraction).
 #[derive(Debug, Clone, FieldNamesAsSlice)]
 pub struct FirewallRule {
-    /// OS of rule origin (ex: "linux", "windows")
+    /// OS of rule origin (e.g., "linux", "windows")
     pub os: Option<String>,
     /// Rule name
     pub name: String,
