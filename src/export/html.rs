@@ -5,7 +5,7 @@ use std::io::{self, Write};
 /// Export the audit result (Vec<AuditMatch>) to HTML format in a file or return the HTML as a String.
 ///
 /// # Arguments
-/// * `audit_results` - The audit results as a vector of AuditMatch
+/// * `audit_results` - The audit results as a vector of `AuditMatch`
 /// * `path` - Optional output file path. If None, returns the HTML as a String.
 ///
 /// # Returns

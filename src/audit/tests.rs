@@ -412,7 +412,7 @@ mod audit {
             edge_traversal: Some(false),
             os: Some("linux".to_string()),
         };
-        let mut tests = vec![
+        let tests = vec![
             (
                 "name",
                 "equals",

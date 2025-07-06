@@ -62,6 +62,9 @@ impl FirewallRule {
 /// A trait for types that can provide firewall rules.
 pub trait FirewallRuleProvider {
     /// Lists all firewall rules available from this provider.
+    ///
+    /// # Errors
+    /// Returns an error if the firewall rules cannot be listed.
     fn list_rules() -> Result<Vec<FirewallRule>>;
 }
 

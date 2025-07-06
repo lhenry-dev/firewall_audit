@@ -44,7 +44,7 @@ pub struct JsonAuditResult {
 /// Export the audit result (Vec<AuditMatch>) to JSON format in a file or return the JSON as a String.
 ///
 /// # Arguments
-/// * `audit_results` - The audit results as a vector of AuditMatch
+/// * `audit_results` - The audit results as a vector of `AuditMatch`
 /// * `path` - Optional output file path. If None, returns the JSON as a String.
 ///
 /// # Returns

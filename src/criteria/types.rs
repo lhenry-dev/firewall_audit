@@ -12,7 +12,7 @@ pub struct AuditRule {
     pub criteria: CriteriaExpr,
     /// Severity level (e.g., info, low, medium, high)
     pub severity: String,
-    /// List of OS (e.g., ["linux", "windows"]) this rule applies to. If None or empty, applies to all.
+    /// List of OS (e.g., `linux`, `windows`) this rule applies to. If None or empty, applies to all.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub os: Option<Vec<String>>,
 }

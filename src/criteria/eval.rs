@@ -101,17 +101,18 @@ fn eval_contains(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
     // Sequence contains string or sequence
     } else if let (Some(Value::Sequence(seq)), Some(Value::String(item))) = (field_val, cond_val) {
         // Try IP address comparison if possible
-        if let Ok(ip_item) = item.parse::<std::net::IpAddr>() {
-            seq.iter().any(|v| match v {
-                Value::String(s) => s
-                    .parse::<std::net::IpAddr>()
-                    .map(|ip| ip == ip_item)
-                    .unwrap_or(false),
-                _ => false,
-            })
-        } else {
-            seq.iter().any(|v| v == cond_val.unwrap())
-        }
+        item.parse::<std::net::IpAddr>().map_or_else(
+            |_| seq.iter().any(|v| v == cond_val.unwrap()),
+            |ip_item| {
+                seq.iter().any(|v| match v {
+                    Value::String(s) => s
+                        .parse::<std::net::IpAddr>()
+                        .map(|ip| ip == ip_item)
+                        .unwrap_or(false),
+                    _ => false,
+                })
+            },
+        )
     } else if let (Some(Value::Sequence(seq)), Some(Value::Sequence(list))) = (field_val, cond_val)
     {
         // Try IP address comparison for all items

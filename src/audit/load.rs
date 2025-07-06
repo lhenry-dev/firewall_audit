@@ -35,6 +35,8 @@ where
 }
 
 /// Loads audit criteria from a YAML file.
+///
+/// # Errors
 /// Returns an error if parsing fails.
 pub fn load_audit_criteria_yaml(path: &str) -> Result<Vec<AuditRule>> {
     load_audit_criteria_from(path, |c| {
@@ -43,6 +45,8 @@ pub fn load_audit_criteria_yaml(path: &str) -> Result<Vec<AuditRule>> {
 }
 
 /// Loads audit criteria from a JSON file.
+///
+/// # Errors
 /// Returns an error if parsing fails.
 pub fn load_audit_criteria_json(path: &str) -> Result<Vec<AuditRule>> {
     load_audit_criteria_from(path, |c| {
@@ -51,6 +55,8 @@ pub fn load_audit_criteria_json(path: &str) -> Result<Vec<AuditRule>> {
 }
 
 /// Loads and merges audit criteria from multiple YAML/JSON files.
+///
+/// # Errors
 /// Returns an error if a file cannot be read or parsed.
 pub fn load_audit_criteria_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
     let mut all_criteria = Vec::new();
@@ -202,5 +208,49 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_load_audit_criteria_yaml_unknown_field_ignored() {
+        let yaml = "- id: badfield\n  description: test\n  criteria:\n    and:\n      - field: notafield\n        operator: equals\n        value: 'foo'\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap().to_string();
+        let rules =
+            super::load_audit_criteria_multi(&[path]).expect("Should not crash on unknown field");
+        assert!(rules.is_empty());
+    }
+
+    #[test]
+    fn test_load_audit_criteria_yaml_wrong_type_ignored() {
+        let yaml = "- id: badtype\n  description: test\n  criteria:\n    and:\n      - field: name\n        operator: in_range\n        value: 'notalist'\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap().to_string();
+        let rules =
+            super::load_audit_criteria_multi(&[path]).expect("Should not crash on wrong type");
+        assert!(rules.is_empty());
+    }
+
+    #[test]
+    fn test_load_audit_criteria_yaml_invalid_structure_ignored() {
+        let yaml = "- id: invalid\n  description: test\n  criteria: 12345\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap().to_string();
+        let res = super::load_audit_criteria_multi(&[path]);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_load_audit_criteria_yaml_multiple_some_invalid() {
+        let yaml = "- id: valid\n  description: test\n  criteria:\n    and:\n      - field: name\n        operator: equals\n        value: 'ok'\n  severity: info\n- id: badfield\n  description: test\n  criteria:\n    and:\n      - field: notafield\n        operator: equals\n        value: 'foo'\n  severity: info\n- id: badtype\n  description: test\n  criteria:\n    and:\n      - field: name\n        operator: in_range\n        value: 'notalist'\n  severity: info\n";
+        let mut tmpfile = NamedTempFile::new().unwrap();
+        write!(tmpfile, "{yaml}").unwrap();
+        let path = tmpfile.path().to_str().unwrap().to_string();
+        let rules = super::load_audit_criteria_multi(&[path])
+            .expect("Should not crash on mixed valid/invalid");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].id, "valid");
     }
 }

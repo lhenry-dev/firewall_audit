@@ -3,7 +3,7 @@ use crate::criteria::types::AuditRule;
 use crate::firewall_rule::FirewallRule;
 
 /// Represents the result of a single audit rule evaluation.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuditMatch {
     pub rule_id: String,
     pub description: String,

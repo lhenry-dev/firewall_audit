@@ -42,7 +42,7 @@ struct Cli {
     output: Option<String>,
 }
 
-/// Entry point for the firewall_audit CLI.
+/// Entry point for the `firewall_audit` CLI.
 fn main() {
     tracing_subscriber::fmt()
         .without_time()

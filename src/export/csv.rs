@@ -5,7 +5,7 @@ use std::io::{self, Write};
 /// Export the audit result (Vec<AuditMatch>) to CSV format in a file or return the CSV as a String.
 ///
 /// # Arguments
-/// * `audit_results` - The audit results as a vector of AuditMatch
+/// * `audit_results` - The audit results as a vector of `AuditMatch`
 /// * `path` - Optional output file path. If None, returns the CSV as a String.
 ///
 /// # Returns
@@ -16,7 +16,7 @@ use std::io::{self, Write};
 /// Returns an error if writing to the file fails.
 pub fn export_csv(audit_results: &[AuditMatch], path: Option<&str>) -> io::Result<String> {
     let mut csv = String::from("rule_id,description,severity,matches\n");
-    for a in audit_results.iter() {
+    for a in audit_results {
         let match_str = a.matched_firewall_rules.join("|");
         // Escape CSV fields (double quotes)
         let esc = |s: &str| {

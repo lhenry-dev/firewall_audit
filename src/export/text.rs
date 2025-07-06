@@ -12,7 +12,7 @@ pub fn export_text(audit_results: &[AuditMatch]) -> String {
             audit.matched_firewall_rules.len()
         ));
         for name in &audit.matched_firewall_rules {
-            output.push_str(&format!("    - {}\n", name));
+            output.push_str(&format!("    - {name}\n"));
         }
     }
     output

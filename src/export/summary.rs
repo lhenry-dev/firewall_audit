@@ -3,7 +3,7 @@ use crate::audit::run::AuditMatch;
 /// Returns a summary phrase for the audit output (for console display).
 ///
 /// # Arguments
-/// * `audit_results` - The audit results as a vector of AuditMatch
+/// * `audit_results` - The audit results as a vector of `AuditMatch`
 ///
 /// # Returns
 /// * `String` - The summary phrase (e.g., "X problem(s) detected..." or "No problem detected...")
