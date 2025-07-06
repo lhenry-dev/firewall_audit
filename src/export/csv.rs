@@ -80,4 +80,18 @@ mod tests {
         assert!(csv2.contains("\"a,b\""));
         assert!(csv2.contains("\"Rule1,Rule2\""));
     }
+
+    #[test]
+    fn test_export_csv_file_error() {
+        let audit_results = vec![];
+        let res = export_csv(&audit_results, Some("/invalid/path/to/file.csv"));
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_export_csv_empty() {
+        let csv = export_csv(&[], None).unwrap();
+        assert!(csv.contains("rule_id,description,severity,matches"));
+        assert_eq!(csv.lines().count(), 1);
+    }
 }

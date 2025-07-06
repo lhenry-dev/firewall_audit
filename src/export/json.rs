@@ -135,4 +135,17 @@ mod tests {
         assert_eq!(summary.get("high").unwrap().as_u64().unwrap(), 1);
         assert_eq!(summary.get("info").unwrap().as_u64().unwrap(), 1);
     }
+
+    #[test]
+    fn test_export_json_file_error() {
+        let audit_results = vec![];
+        let res = export_json(&audit_results, Some("/invalid/path/to/file.json"));
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_export_json_empty() {
+        let json = export_json(&[], None).unwrap();
+        assert!(json.contains("\"results\": []"));
+    }
 }

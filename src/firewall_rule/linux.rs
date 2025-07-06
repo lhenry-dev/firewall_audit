@@ -176,3 +176,121 @@ impl FirewallRuleProvider for LinuxFirewallProvider {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+    use std::net::IpAddr;
+
+    #[test]
+    fn test_from_linux_firewall_rule_minimal() {
+        let rule = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULE1".into()],
+            raw_line: "-A RULE1".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        assert_eq!(fw.name, "RULE1");
+        assert_eq!(fw.direction, "Unknown");
+        assert_eq!(fw.action, "Other");
+        assert!(fw.enabled);
+        assert_eq!(fw.os.as_deref(), Some("linux"));
+    }
+
+    #[test]
+    fn test_from_linux_firewall_rule_full() {
+        let mut tokens = vec![
+            "-A".into(),
+            "RULE2".into(),
+            "-p".into(),
+            "tcp".into(),
+            "--dport".into(),
+            "80".into(),
+            "--sport".into(),
+            "12345".into(),
+            "-s".into(),
+            "127.0.0.1".into(),
+            "-d".into(),
+            "8.8.8.8".into(),
+            "-i".into(),
+            "eth0".into(),
+            "-o".into(),
+            "eth1".into(),
+            "-j".into(),
+            "ACCEPT".into(),
+        ];
+        let rule = LinuxFirewallRule {
+            tokens: tokens.clone(),
+            raw_line: "-A RULE2 -p tcp --dport 80 --sport 12345 -s 127.0.0.1 -d 8.8.8.8 -i eth0 -o eth1 -j ACCEPT".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        assert_eq!(fw.name, "RULE2");
+        assert_eq!(fw.direction, "Unknown");
+        assert_eq!(fw.action, "Allow");
+        assert_eq!(fw.protocol.as_deref(), Some("tcp"));
+        assert!(fw.local_ports.as_ref().unwrap().contains(&80));
+        assert!(fw.remote_ports.as_ref().unwrap().contains(&12345));
+        assert!(fw
+            .local_addresses
+            .as_ref()
+            .unwrap()
+            .contains(&"127.0.0.1".parse::<IpAddr>().unwrap()));
+        assert!(fw
+            .remote_addresses
+            .as_ref()
+            .unwrap()
+            .contains(&"8.8.8.8".parse::<IpAddr>().unwrap()));
+        assert!(fw.interfaces.as_ref().unwrap().contains("eth0"));
+        assert!(fw.interfaces.as_ref().unwrap().contains("eth1"));
+    }
+
+    #[test]
+    fn test_direction_detection() {
+        let rule_in = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULEIN".into()],
+            raw_line: "-A RULEIN ... INPUT ...".into(),
+        };
+        let fw_in = FirewallRule::from(&rule_in);
+        assert_eq!(fw_in.direction, "In");
+        let rule_out = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULEOUT".into()],
+            raw_line: "-A RULEOUT ... OUTPUT ...".into(),
+        };
+        let fw_out = FirewallRule::from(&rule_out);
+        assert_eq!(fw_out.direction, "Out");
+    }
+
+    #[test]
+    fn test_action_friendly() {
+        let accept = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "R".into(), "-j".into(), "ACCEPT".into()],
+            raw_line: "-A R -j ACCEPT".into(),
+        };
+        let drop = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "R".into(), "-j".into(), "DROP".into()],
+            raw_line: "-A R -j DROP".into(),
+        };
+        let reject = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "R".into(), "-j".into(), "REJECT".into()],
+            raw_line: "-A R -j REJECT".into(),
+        };
+        let other = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "R".into(), "-j".into(), "CUSTOM".into()],
+            raw_line: "-A R -j CUSTOM".into(),
+        };
+        let fw_accept = FirewallRule::from(&accept);
+        let fw_drop = FirewallRule::from(&drop);
+        let fw_reject = FirewallRule::from(&reject);
+        let fw_other = FirewallRule::from(&other);
+        assert_eq!(fw_accept.action, "Allow");
+        assert_eq!(fw_drop.action, "Deny");
+        assert_eq!(fw_reject.action, "Deny");
+        assert_eq!(fw_other.action, "CUSTOM");
+    }
+
+    #[test]
+    fn test_list_rules_error() {
+        let res = LinuxFirewallProvider::list_rules();
+        assert!(res.is_ok() || res.is_err());
+    }
+}

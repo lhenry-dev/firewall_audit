@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+use strum_macros;
 
 /// Represents a single audit rule loaded from a YAML or JSON file.
 #[derive(Debug, Deserialize, Clone)]
@@ -18,7 +19,16 @@ pub struct AuditRule {
 }
 
 /// Supported operators for criteria evaluation.
-#[derive(Debug, Clone, Copy, strum_macros::EnumString, strum_macros::AsRefStr)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    strum_macros::EnumString,
+    strum_macros::AsRefStr,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum CriteriaOperator {
     /// Equality operator
@@ -100,5 +110,41 @@ impl CriteriaCondition {
     /// Parse the `operator_raw` string into the operator enum.
     pub fn parse_operator(&mut self) {
         self.operator = self.operator_raw.parse::<CriteriaOperator>().ok();
+    }
+}
+
+#[cfg(test)]
+mod coverage {
+    use super::*;
+    #[test]
+    fn test_expected_type_all_variants() {
+        use CriteriaOperator::*;
+        let all = [
+            Equals,
+            Not,
+            Matches,
+            StartsWith,
+            EndsWith,
+            Regex,
+            Wildcard,
+            Contains,
+            InRange,
+            Lt,
+            Lte,
+            Gt,
+            Gte,
+            Cidr,
+            IsNull,
+            ApplicationExists,
+            ServiceExists,
+        ];
+        for op in all.iter() {
+            let t = op.expected_type();
+            assert!(
+                !t.is_empty(),
+                "expected_type for {:?} should not be empty",
+                op
+            );
+        }
     }
 }

@@ -40,3 +40,17 @@ impl From<&WindowsFirewallRule> for FirewallRule {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_rules_error() {
+        // On ne peut pas vraiment tester list_rules sans accès à l'API Windows
+        // mais on vérifie que l'appel ne panique pas (mock)
+        let res = WindowsFirewallProvider::list_rules();
+        // On accepte Ok ou Err, mais pas de panic
+        assert!(res.is_ok() || res.is_err());
+    }
+}

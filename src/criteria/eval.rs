@@ -349,3 +349,228 @@ pub fn eval_criteria(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
         CriteriaExpr::Condition(cond) => eval_condition(rule, cond),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_yaml::Value;
+
+    #[test]
+    fn test_eval_equals() {
+        assert!(eval_equals(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("foo".to_string()))
+        ));
+        assert!(!eval_equals(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_matches() {
+        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
+        assert!(eval_matches(Some(&seq), Some(&Value::Number(22.into()))));
+        assert!(!eval_matches(Some(&seq), Some(&Value::Number(23.into()))));
+    }
+
+    #[test]
+    fn test_eval_starts_ends_contains() {
+        assert!(eval_starts_with(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("foo".to_string()))
+        ));
+        assert!(eval_ends_with(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+        assert!(eval_contains(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("oba".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_regex_wildcard() {
+        assert!(eval_regex(
+            Some(&Value::String("abc123".to_string())),
+            Some(&Value::String("abc.*".to_string()))
+        ));
+        assert!(eval_wildcard(
+            Some(&Value::String("file.txt".to_string())),
+            Some(&Value::String("*.txt".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_in_range_cmp() {
+        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
+        let range = Value::Sequence(vec![Value::Number(20.into()), Value::Number(90.into())]);
+        assert!(eval_in_range(Some(&seq), Some(&range)));
+        assert!(eval_cmp(
+            CriteriaOperator::Gt,
+            Some(&Value::Number(5.into())),
+            Some(&Value::Number(2.into()))
+        ));
+        assert!(!eval_cmp(
+            CriteriaOperator::Lt,
+            Some(&Value::Number(5.into())),
+            Some(&Value::Number(2.into()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_is_null() {
+        assert!(eval_is_null(None));
+        assert!(!eval_is_null(Some(&Value::String("foo".to_string()))));
+    }
+
+    #[test]
+    fn test_eval_matches_various_types() {
+        // Test avec des types inattendus
+        let val = Value::Number(22.into());
+        assert!(!eval_matches(
+            Some(&val),
+            Some(&Value::String("foo".to_string()))
+        ));
+        let val = Value::Bool(true);
+        assert!(!eval_matches(Some(&val), Some(&Value::Bool(false))));
+    }
+
+    #[test]
+    fn test_eval_contains_ip_sequence() {
+        // Test IP dans une séquence
+        let seq = Value::Sequence(vec![
+            Value::String("127.0.0.1".to_string()),
+            Value::String("0.0.0.0".to_string()),
+        ]);
+        assert!(eval_contains(
+            Some(&seq),
+            Some(&Value::String("127.0.0.1".to_string()))
+        ));
+        assert!(!eval_contains(
+            Some(&seq),
+            Some(&Value::String("192.168.1.1".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_regex_invalid_pattern() {
+        // Regex invalide
+        assert!(!eval_regex(
+            Some(&Value::String("abc".to_string())),
+            Some(&Value::String("[".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_wildcard_non_string() {
+        // Wildcard sur non-string
+        assert!(!eval_wildcard(
+            Some(&Value::Number(1.into())),
+            Some(&Value::String("*".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_in_range_wrong_type() {
+        // Mauvais type pour in_range
+        let val = Value::String("notalist".to_string());
+        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        assert!(!eval_in_range(Some(&val), Some(&range)));
+    }
+
+    #[test]
+    fn test_eval_cmp_non_number() {
+        // Comparaison avec des strings non convertibles
+        assert!(!eval_cmp(
+            CriteriaOperator::Gt,
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_matches_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        assert!(!eval_matches(Some(&seq), Some(&Value::Number(1.into()))));
+    }
+
+    #[test]
+    fn test_eval_contains_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        assert!(!eval_contains(
+            Some(&seq),
+            Some(&Value::String("foo".to_string()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_in_range_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        assert!(!eval_in_range(Some(&seq), Some(&range)));
+    }
+
+    #[test]
+    fn test_eval_cmp_nulls() {
+        assert!(!eval_cmp(CriteriaOperator::Gt, None, None));
+    }
+}
+
+#[cfg(test)]
+mod coverage_get_field_value {
+    use super::*;
+    use crate::firewall_rule::FirewallRule;
+
+    #[test]
+    fn test_get_field_value_all_fields() {
+        let rule = FirewallRule {
+            name: "n".into(),
+            direction: "d".into(),
+            enabled: true,
+            action: "a".into(),
+            description: Some("desc".into()),
+            application_name: Some("app".into()),
+            service_name: Some("svc".into()),
+            protocol: Some("TCP".into()),
+            local_ports: Some([1u16].iter().cloned().collect()),
+            remote_ports: Some([2u16].iter().cloned().collect()),
+            local_addresses: Some(["127.0.0.1".parse().unwrap()].iter().cloned().collect()),
+            remote_addresses: Some(["0.0.0.0".parse().unwrap()].iter().cloned().collect()),
+            icmp_types_and_codes: Some("8:0".into()),
+            interfaces: Some(["eth0".into()].iter().cloned().collect()),
+            interface_types: Some(["lan".into()].iter().cloned().collect()),
+            grouping: Some("grp".into()),
+            profiles: Some("Domain".into()),
+            edge_traversal: Some(false),
+            os: Some("linux".into()),
+        };
+        let fields = [
+            "name",
+            "direction",
+            "enabled",
+            "action",
+            "description",
+            "application_name",
+            "service_name",
+            "protocol",
+            "local_ports",
+            "remote_ports",
+            "local_addresses",
+            "remote_addresses",
+            "icmp_types_and_codes",
+            "interfaces",
+            "interface_types",
+            "grouping",
+            "profiles",
+            "edge_traversal",
+        ];
+        for f in fields.iter() {
+            let v = get_field_value(&rule, f);
+            assert!(v.is_some(), "field {f} should be Some");
+        }
+        // Champ inconnu
+        assert!(get_field_value(&rule, "notafield").is_none());
+    }
+}

@@ -131,4 +131,9 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_valid_fields_contains_name() {
+        assert!(FirewallRule::valid_fields().contains(&"name"));
+    }
 }

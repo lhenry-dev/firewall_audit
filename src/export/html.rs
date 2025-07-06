@@ -114,4 +114,17 @@ mod tests {
         assert!(html.contains("sev-high-txt"));
         assert!(html.contains("sev-info-txt"));
     }
+
+    #[test]
+    fn test_export_html_file_error() {
+        let audit_results = vec![];
+        let res = export_html(&audit_results, Some("/invalid/path/to/file.html"));
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_export_html_empty() {
+        let html = export_html(&[], None).unwrap();
+        assert!(html.contains("No problem detected"));
+    }
 }

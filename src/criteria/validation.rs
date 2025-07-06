@@ -161,7 +161,284 @@ mod tests {
         };
         let expr = CriteriaExpr::Condition(cond);
         let errors = validate_criteria_expr(&expr, "root");
-        // Pas d'opérateur => pas d'erreur de type, mais la règle sera ignorée au runtime
         assert!(errors.is_empty());
+    }
+
+    #[test]
+    fn test_validate_criteria_expr_valid_field_wrong_operator_type() {
+        let cond = CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "starts_with".to_string(),
+            value: Some(Value::Number(22.into())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(errors.iter().any(|e| e.contains("must be a string")));
+    }
+
+    #[test]
+    fn test_starts_with_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "starts_with".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for starts_with on name with number"
+        );
+    }
+
+    #[test]
+    fn test_ends_with_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "ends_with".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for ends_with on name with number"
+        );
+    }
+
+    #[test]
+    fn test_regex_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "regex".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for regex on name with number"
+        );
+    }
+
+    #[test]
+    fn test_wildcard_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "wildcard".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for wildcard on name with number"
+        );
+    }
+
+    #[test]
+    fn test_contains_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "contains".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for contains on name with number"
+        );
+    }
+
+    #[test]
+    fn test_application_exists_wrong_type_on_application_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "application_name".to_string(),
+            operator_raw: "application_exists".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for application_exists on application_name with number"
+        );
+    }
+
+    #[test]
+    fn test_service_exists_wrong_type_on_service_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "service_name".to_string(),
+            operator_raw: "service_exists".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a string")),
+            "Should catch error for service_exists on service_name with number"
+        );
+    }
+
+    #[test]
+    fn test_in_range_wrong_type_on_local_ports() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "in_range".to_string(),
+            value: Some(serde_yaml::Value::String("notalist".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a list of 2 numbers")),
+            "Should catch error for in_range on local_ports with string"
+        );
+    }
+
+    #[test]
+    fn test_lt_wrong_type_on_local_ports() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "lt".to_string(),
+            value: Some(serde_yaml::Value::String("notanumber".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a number")),
+            "Should catch error for lt on local_ports with string"
+        );
+    }
+
+    #[test]
+    fn test_lte_wrong_type_on_local_ports() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "lte".to_string(),
+            value: Some(serde_yaml::Value::String("notanumber".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a number")),
+            "Should catch error for lte on local_ports with string"
+        );
+    }
+
+    #[test]
+    fn test_gt_wrong_type_on_local_ports() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "gt".to_string(),
+            value: Some(serde_yaml::Value::String("notanumber".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a number")),
+            "Should catch error for gt on local_ports with string"
+        );
+    }
+
+    #[test]
+    fn test_gte_wrong_type_on_local_ports() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_ports".to_string(),
+            operator_raw: "gte".to_string(),
+            value: Some(serde_yaml::Value::String("notanumber".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must be a number")),
+            "Should catch error for gte on local_ports with string"
+        );
+    }
+
+    #[test]
+    fn test_cidr_wrong_type_on_local_addresses() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "local_addresses".to_string(),
+            operator_raw: "cidr".to_string(),
+            value: Some(serde_yaml::Value::Number(1.into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a string (IP or CIDR)")),
+            "Should catch error for cidr on local_addresses with number"
+        );
+    }
+
+    #[test]
+    fn test_is_null_wrong_type_on_name() {
+        let cond = crate::criteria::types::CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "is_null".to_string(),
+            value: Some(serde_yaml::Value::String("foo".into())),
+            operator: None,
+        };
+        let expr = crate::criteria::types::CriteriaExpr::Condition(cond);
+        let errors = super::validate_criteria_expr(&expr, "root");
+        assert!(
+            errors.iter().any(|e| e.contains("must not have a value")),
+            "Should catch error for is_null on name with string"
+        );
+    }
+}
+
+#[cfg(test)]
+mod coverage {
+    use crate::criteria::types::CriteriaOperator;
+
+    #[test]
+    fn test_expected_type_all_variants() {
+        use CriteriaOperator::*;
+        let all = [
+            Equals,
+            Not,
+            Matches,
+            StartsWith,
+            EndsWith,
+            Regex,
+            Wildcard,
+            Contains,
+            InRange,
+            Lt,
+            Lte,
+            Gt,
+            Gte,
+            Cidr,
+            IsNull,
+            ApplicationExists,
+            ServiceExists,
+        ];
+        for op in all.iter() {
+            let t = op.expected_type();
+            assert!(
+                !t.is_empty(),
+                "expected_type for {:?} should not be empty",
+                op
+            );
+        }
     }
 }
