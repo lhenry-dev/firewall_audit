@@ -1,7 +1,3 @@
-//! HTML export module for `firewall_audit`
-//!
-//! Provides a function to export audit results to HTML format.
-
 use crate::audit::run::AuditMatch;
 use std::fs::File;
 use std::io::{self, Write};

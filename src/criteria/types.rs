@@ -9,7 +9,7 @@ pub struct AuditRule {
     /// Description of the rule
     pub description: String,
     /// Criteria expression for the rule
-    pub criterias: CriteriaExpr,
+    pub criteria: CriteriaExpr,
     /// Severity level (e.g., info, low, medium, high)
     pub severity: String,
     /// List of OS (e.g., ["linux", "windows"]) this rule applies to. If None or empty, applies to all.

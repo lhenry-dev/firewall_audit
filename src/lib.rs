@@ -14,7 +14,7 @@
 //!
 //! ## Example (CLI)
 //! ```sh
-//! firewall_audit --rules rules.yaml --export csv --output result.csv
+//! firewall_audit --rules audit_criteria.yaml --export csv --output result.csv
 //! ```
 
 mod audit;
@@ -24,8 +24,8 @@ mod export;
 mod firewall_rule;
 
 pub use audit::{
-    load_audit_rules_json, load_audit_rules_multi, load_audit_rules_yaml,
-    run_audit_multi_with_rules,
+    load_audit_criteria_json, load_audit_criteria_multi, load_audit_criteria_yaml,
+    run_audit_multi_with_criteria,
 };
 pub use criteria::{AuditRule, CriteriaCondition, CriteriaExpr, CriteriaOperator};
 pub use error::{FirewallAuditError, Result};

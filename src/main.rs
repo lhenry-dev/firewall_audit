@@ -4,7 +4,7 @@
 //!
 //! # Example
 //! ```sh
-//! firewall_audit --rules rules.yaml --export html --output result.html
+//! firewall_audit --criteria audit_criteria.yaml --export html --output result.html
 //! ```
 
 use clap::{Parser, ValueEnum};
@@ -22,18 +22,23 @@ enum ExportFormat {
 
 /// Firewall Audit CLI
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Cross-platform firewall audit tool (CSV/HTML/JSON export)", long_about = None)]
+#[command(
+    author,
+    version,
+    about = "Cross-platform firewall audit tool (CSV/HTML/JSON export)",
+    long_about = "This program audits local firewall rules against user-defined criteria from a YAML or JSON file. Results can be exported in various formats."
+)]
 struct Cli {
-    /// Path to the rules file (YAML or JSON)
-    #[arg(short, long)]
-    rules: String,
+    /// Path to the audit criteria file (YAML or JSON)
+    #[arg(short, long, value_name = "FILE")]
+    criteria: String,
 
-    /// Export format (csv, html, json)
+    /// Export format
     #[arg(short, long, value_enum)]
     export: Option<ExportFormat>,
 
-    /// Output file (if not set, print to stdout)
-    #[arg(short, long)]
+    /// Output file
+    #[arg(short, long, value_name = "FILE")]
     output: Option<String>,
 }
 
@@ -45,14 +50,14 @@ fn main() {
         .init();
     let cli = Cli::parse();
 
-    let audit_rules =
-        firewall_audit::load_audit_rules_multi(&[cli.rules.clone()]).unwrap_or_else(|e| {
-            error!("Error loading audit rules: {}", e);
+    let audit_criteria = firewall_audit::load_audit_criteria_multi(&[cli.criteria.clone()])
+        .unwrap_or_else(|e| {
+            error!("Error loading audit criteria: {}", e);
             process::exit(1);
         });
-    info!("Loaded {} audit rule(s).", audit_rules.len());
-    if audit_rules.is_empty() {
-        error!("No valid audit rules loaded. Exiting.");
+    info!("Loaded {} audit criteria(s).", audit_criteria.len());
+    if audit_criteria.is_empty() {
+        error!("No valid audit criteria loaded. Exiting.");
         process::exit(1);
     }
 
@@ -64,7 +69,8 @@ fn main() {
     info!("Loaded {} firewall rule(s).", firewall_rules.len());
 
     // Run the audit and get structured results
-    let audit_results = firewall_audit::run_audit_multi_with_rules(&audit_rules, &firewall_rules);
+    let audit_results =
+        firewall_audit::run_audit_multi_with_criteria(&audit_criteria, &firewall_rules);
 
     let output_path = match (&cli.output, &cli.export) {
         (None, Some(fmt)) => Some({

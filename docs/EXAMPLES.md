@@ -3,7 +3,7 @@
 ```yaml
 - id: allow-ssh-from-anywhere
   description: Permits SSH from anywhere
-  criterias:
+  criteria:
     and:
       - field: name
         operator: contains
@@ -24,7 +24,7 @@
 
 - id: check-app-exists
   description: Checks if the referenced application exists
-  criterias:
+  criteria:
     and:
       - field: application_name
         operator: application_exists
@@ -32,7 +32,7 @@
 
 - id: check-service-exists
   description: Checks if the referenced service exists
-  criterias:
+  criteria:
     and:
       - field: service_name
         operator: service_exists
@@ -46,7 +46,7 @@
   {
     "id": "allow-ssh-from-anywhere",
     "description": "Permits SSH from anywhere",
-    "criterias": {
+    "criteria": {
       "and": [
         {"field": "name", "operator": "contains", "value": "SSH"},
         {"field": "local_ports", "operator": "matches", "value": 22},
@@ -60,7 +60,7 @@
   {
     "id": "check-app-exists",
     "description": "Checks if the referenced application exists",
-    "criterias": {
+    "criteria": {
       "and": [
         {"field": "application_name", "operator": "application_exists"}
       ]
@@ -70,7 +70,7 @@
   {
     "id": "check-service-exists",
     "description": "Checks if the referenced service exists",
-    "criterias": {
+    "criteria": {
       "and": [
         {"field": "service_name", "operator": "service_exists"}
       ]

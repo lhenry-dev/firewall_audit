@@ -1,6 +1,6 @@
 - id: block-any-inbound
   description: Block all inbound traffic by default (except explicit allows)
-  criterias:
+  criteria:
     and:
       - field: direction
         operator: equals
@@ -15,7 +15,7 @@
 
 - id: allow-rdp-restricted
   description: Allow RDP (3389) only from specific trusted IPs
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -33,7 +33,7 @@
 
 - id: block-rdp-from-anywhere
   description: Block RDP (3389) from any source (should not be open to the world)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -51,7 +51,7 @@
 
 - id: allow-ssh-restricted
   description: Allow SSH (22) only from specific trusted IPs
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -69,7 +69,7 @@
 
 - id: block-ssh-from-anywhere
   description: Block SSH (22) from any source (should not be open to the world)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -87,7 +87,7 @@
 
 - id: allow-http-https-restricted
   description: Allow HTTP/HTTPS (80/443) only from specific trusted IPs (not open to all unless web server)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: in_range
@@ -105,7 +105,7 @@
 
 - id: block-smb-from-anywhere
   description: Block SMB (445/139) from any source (should not be open to the world)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -123,7 +123,7 @@
 
 - id: block-telnet-from-anywhere
   description: Block Telnet (23) from any source (should not be open to the world)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -141,7 +141,7 @@
 
 - id: block-all-inbound-except-essential
   description: Block all inbound except essential business services (customize as needed)
-  criterias:
+  criteria:
     and:
       - field: direction
         operator: equals
@@ -156,7 +156,7 @@
 
 - id: detect-any-allow-anywhere
   description: Detect any rule that allows traffic from any source (0.0.0.0/0)
-  criterias:
+  criteria:
     and:
       - field: action
         operator: equals
@@ -168,7 +168,7 @@
 
 - id: block-insecure-protocols
   description: Block insecure protocols (FTP, Telnet, TFTP, SNMP, NetBIOS, etc.)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -180,7 +180,7 @@
 
 - id: block-outbound-to-any
   description: Block outbound traffic to any destination unless explicitly allowed
-  criterias:
+  criteria:
     and:
       - field: direction
         operator: equals
@@ -195,7 +195,7 @@
 
 - id: allow-dns-only-to-trusted
   description: Allow DNS (53) only to trusted DNS servers
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -213,7 +213,7 @@
 
 - id: block-mail-protocols-from-anywhere
   description: Block mail protocols (SMTP, IMAP, POP3) from any source (should not be open to the world)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: matches
@@ -228,7 +228,7 @@
 
 - id: block-any-rule-without-description
   description: Detect any rule without a description (should be documented)
-  criterias:
+  criteria:
     and:
       - field: description
         operator: is_null
@@ -236,7 +236,7 @@
 
 - id: block-any-rule-without-application-or-service
   description: Detect any rule that is not tied to an application or service
-  criterias:
+  criteria:
     and:
       - field: application_name
         operator: is_null
@@ -246,7 +246,7 @@
 
 - id: block-any-rule-without-logging
   description: Detect any rule that does not have logging enabled (if applicable)
-  criterias:
+  criteria:
     and:
       - field: description
         operator: not
@@ -255,7 +255,7 @@
 
 - id: block-any-rule-without-profile
   description: Detect any rule not assigned to a profile (Domain, Private, Public)
-  criterias:
+  criteria:
     and:
       - field: profiles
         operator: is_null
@@ -263,7 +263,7 @@
 
 - id: block-any-rule-without-interface
   description: Detect any rule not assigned to an interface
-  criterias:
+  criteria:
     and:
       - field: interfaces
         operator: is_null
@@ -271,7 +271,7 @@
 
 - id: block-any-rule-without-edge-traversal
   description: Detect any rule with edge traversal enabled (should be rare)
-  criterias:
+  criteria:
     and:
       - field: edge_traversal
         operator: equals
@@ -280,7 +280,7 @@
 
 - id: block-any-rule-without-grouping
   description: Detect any rule not assigned to a group
-  criterias:
+  criteria:
     and:
       - field: grouping
         operator: is_null
@@ -288,7 +288,7 @@
 
 - id: block-any-rule-without-protocol
   description: Detect any rule without a protocol specified
-  criterias:
+  criteria:
     and:
       - field: protocol
         operator: is_null
@@ -296,7 +296,7 @@
 
 - id: block-any-rule-without-port
   description: Detect any rule without a port specified (if applicable)
-  criterias:
+  criteria:
     and:
       - field: local_ports
         operator: is_null
@@ -306,7 +306,7 @@
 
 - id: block-any-rule-without-application-exists
   description: Detect any rule referencing a non-existent application
-  criterias:
+  criteria:
     and:
       - field: application_name
         operator: application_exists
@@ -315,7 +315,7 @@
 
 - id: block-any-rule-without-service-exists
   description: Detect any rule referencing a non-existent service
-  criterias:
+  criteria:
     and:
       - field: service_name
         operator: service_exists
@@ -324,7 +324,7 @@
 
 - id: block-any-rule-with-wildcard
   description: Detect any rule with wildcard in name or description
-  criterias:
+  criteria:
     or:
       - field: name
         operator: wildcard
@@ -336,7 +336,7 @@
 
 - id: block-any-rule-with-regex
   description: Detect any rule with regex in name or description
-  criterias:
+  criteria:
     or:
       - field: name
         operator: regex
@@ -348,7 +348,7 @@
 
 - id: block-any-rule-with-allow-all
   description: Detect any rule that allows all traffic (any port, any protocol, any address)
-  criterias:
+  criteria:
     and:
       - field: action
         operator: equals
@@ -366,7 +366,7 @@
 
 - id: block-any-rule-without-enabled
   description: Detect any rule that is disabled (should be reviewed or removed)
-  criterias:
+  criteria:
     and:
       - field: enabled
         operator: equals
@@ -375,7 +375,7 @@
 
 - id: block-any-rule-without-action
   description: Detect any rule without an action specified
-  criterias:
+  criteria:
     and:
       - field: action
         operator: is_null
@@ -383,7 +383,7 @@
 
 - id: block-any-rule-without-direction
   description: Detect any rule without a direction specified
-  criterias:
+  criteria:
     and:
       - field: direction
         operator: is_null
@@ -391,7 +391,7 @@
 
 - id: block-any-rule-without-name
   description: Detect any rule without a name
-  criterias:
+  criteria:
     and:
       - field: name
         operator: is_null

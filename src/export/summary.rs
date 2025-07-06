@@ -1,7 +1,3 @@
-//! Console summary module for `firewall_audit`
-//!
-//! Provides a function to append a summary message to the audit output for console display.
-
 use crate::audit::run::AuditMatch;
 
 /// Returns a summary phrase for the audit output (for console display).

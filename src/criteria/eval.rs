@@ -95,8 +95,41 @@ fn eval_ends_with(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
 }
 
 fn eval_contains(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
+    // String contains string (default case)
     if let (Some(Value::String(s)), Some(Value::String(substr))) = (field_val, cond_val) {
         s.to_lowercase().contains(&substr.to_lowercase())
+    // Sequence contains string or sequence
+    } else if let (Some(Value::Sequence(seq)), Some(Value::String(item))) = (field_val, cond_val) {
+        // Try IP address comparison if possible
+        if let Ok(ip_item) = item.parse::<std::net::IpAddr>() {
+            seq.iter().any(|v| match v {
+                Value::String(s) => s
+                    .parse::<std::net::IpAddr>()
+                    .map(|ip| ip == ip_item)
+                    .unwrap_or(false),
+                _ => false,
+            })
+        } else {
+            seq.iter().any(|v| v == cond_val.unwrap())
+        }
+    } else if let (Some(Value::Sequence(seq)), Some(Value::Sequence(list))) = (field_val, cond_val)
+    {
+        // Try IP address comparison for all items
+        seq.iter().any(|v| {
+            list.iter().any(|item| match (v, item) {
+                (Value::String(s1), Value::String(s2)) => {
+                    if let (Ok(ip1), Ok(ip2)) = (
+                        s1.parse::<std::net::IpAddr>(),
+                        s2.parse::<std::net::IpAddr>(),
+                    ) {
+                        ip1 == ip2
+                    } else {
+                        s1 == s2
+                    }
+                }
+                _ => v == item,
+            })
+        })
     } else {
         false
     }
@@ -307,11 +340,11 @@ pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
     }
 }
 
-pub fn eval_criterias(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
+pub fn eval_criteria(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
     match expr {
-        CriteriaExpr::Group { and } => and.iter().all(|c| eval_criterias(rule, c)),
-        CriteriaExpr::OrGroup { or } => or.iter().any(|c| eval_criterias(rule, c)),
-        CriteriaExpr::NotGroup { not } => !eval_criterias(rule, not),
+        CriteriaExpr::Group { and } => and.iter().all(|c| eval_criteria(rule, c)),
+        CriteriaExpr::OrGroup { or } => or.iter().any(|c| eval_criteria(rule, c)),
+        CriteriaExpr::NotGroup { not } => !eval_criteria(rule, not),
         CriteriaExpr::Condition(cond) => eval_condition(rule, cond),
     }
 }

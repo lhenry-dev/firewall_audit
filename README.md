@@ -13,7 +13,7 @@ A cross-platform firewall audit tool and library.
 ## Usage
 
 ```sh
-firewall_audit --rules rules.yaml --export csv --output result.csv
+firewall_audit --rules audit_criteria.yaml --export csv --output result.csv
 ```
 
 ## Features

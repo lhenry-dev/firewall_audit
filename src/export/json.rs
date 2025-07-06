@@ -1,7 +1,3 @@
-//! JSON export module for `firewall_audit`
-//!
-//! Provides a function to export audit results to JSON format.
-
 use crate::audit::run::AuditMatch;
 use crate::error::FirewallAuditError;
 use serde::Serialize;
