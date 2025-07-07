@@ -120,11 +120,27 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
 
-    use crate::criteria::{
-        types::{CriteriaCondition, CriteriaExpr},
-        validation::validate_criteria_expr,
+    use crate::{
+        criteria::{
+            types::{CriteriaCondition, CriteriaExpr},
+            validation::validate_criteria_expr,
+        },
+        CriteriaOperator,
     };
     use serde_yaml::Value;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn test_expected_type_all_variants() {
+        for op in CriteriaOperator::iter() {
+            let t = op.expected_type();
+            assert!(
+                !t.is_empty(),
+                "expected_type for {:?} should not be empty",
+                op
+            );
+        }
+    }
 
     #[test]
     fn test_validate_criteria_expr_unknown_field() {
@@ -410,19 +426,213 @@ mod tests {
 }
 
 #[cfg(test)]
-mod coverage {
-    use crate::criteria::types::CriteriaOperator;
-    use strum::IntoEnumIterator;
+mod extra_coverage {
+    use super::*;
+    use crate::criteria::types::{CriteriaCondition, CriteriaExpr};
+    use serde_yaml::Value;
 
     #[test]
-    fn test_expected_type_all_variants() {
-        for op in CriteriaOperator::iter() {
-            let t = op.expected_type();
+    fn test_group_and_or_not_branches() {
+        // Group with two valid conditions
+        let cond1 = CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "equals".to_string(),
+            value: Some(Value::String("foo".to_string())),
+            operator: None,
+        };
+        let cond2 = CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "equals".to_string(),
+            value: Some(Value::String("bar".to_string())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Group {
+            and: vec![
+                CriteriaExpr::Condition(cond1.clone()),
+                CriteriaExpr::Condition(cond2.clone()),
+            ],
+        };
+        let errors = validate_criteria_expr(&expr, "root");
+        assert!(errors.is_empty());
+
+        // OrGroup with one valid, one invalid
+        let bad_cond = CriteriaCondition {
+            field: "notafield".to_string(),
+            operator_raw: "equals".to_string(),
+            value: Some(Value::String("foo".to_string())),
+            operator: None,
+        };
+        let expr = CriteriaExpr::OrGroup {
+            or: vec![
+                CriteriaExpr::Condition(cond1.clone()),
+                CriteriaExpr::Condition(bad_cond.clone()),
+            ],
+        };
+        let errors = validate_criteria_expr(&expr, "root");
+        assert!(errors.iter().any(|e| e.contains("Unknown field")));
+
+        // NotGroup with invalid
+        let expr = CriteriaExpr::NotGroup {
+            not: Box::new(CriteriaExpr::Condition(bad_cond.clone())),
+        };
+        let errors = validate_criteria_expr(&expr, "root");
+        assert!(errors.iter().any(|e| e.contains("Unknown field")));
+    }
+
+    #[test]
+    fn test_all_criteria_operators_types() {
+        let field = "name".to_string();
+        let path = "root";
+        let string_val = Some(Value::String("foo".to_string()));
+        let number_val = Some(Value::Number(1.into()));
+        let bool_val = Some(Value::Bool(true));
+        let list_val = Some(Value::Sequence(vec![
+            Value::Number(1.into()),
+            Value::Number(2.into()),
+        ]));
+        let bad_list_val = Some(Value::Sequence(vec![Value::Number(1.into())]));
+        let null_val = None;
+
+        // Equals, Not, Matches accept any type
+        for op in ["equals", "not", "matches"] {
+            for val in [
+                string_val.clone(),
+                number_val.clone(),
+                bool_val.clone(),
+                list_val.clone(),
+            ] {
+                let cond = CriteriaCondition {
+                    field: field.clone(),
+                    operator_raw: op.to_string(),
+                    value: val,
+                    operator: None,
+                };
+                let expr = CriteriaExpr::Condition(cond);
+                let errors = validate_criteria_expr(&expr, path);
+                assert!(errors.is_empty(), "{op} should accept any type");
+            }
+        }
+
+        // StartsWith, EndsWith, Regex, Wildcard, Contains, ApplicationExists, ServiceExists require string
+        for op in [
+            "starts_with",
+            "ends_with",
+            "regex",
+            "wildcard",
+            "contains",
+            "application_exists",
+            "service_exists",
+        ] {
+            let cond = CriteriaCondition {
+                field: field.clone(),
+                operator_raw: op.to_string(),
+                value: string_val.clone(),
+                operator: None,
+            };
+            let expr = CriteriaExpr::Condition(cond);
+            let errors = validate_criteria_expr(&expr, path);
+            assert!(errors.is_empty(), "{op} should accept string");
+            let cond = CriteriaCondition {
+                field: field.clone(),
+                operator_raw: op.to_string(),
+                value: number_val.clone(),
+                operator: None,
+            };
+            let expr = CriteriaExpr::Condition(cond);
+            let errors = validate_criteria_expr(&expr, path);
             assert!(
-                !t.is_empty(),
-                "expected_type for {:?} should not be empty",
-                op
+                errors.iter().any(|e| e.contains("must be a string")),
+                "{op} should reject non-string"
             );
         }
+
+        // InRange requires list of 2 numbers
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "in_range".to_string(),
+            value: list_val.clone(),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors.is_empty());
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "in_range".to_string(),
+            value: bad_list_val.clone(),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors
+            .iter()
+            .any(|e| e.contains("must be a list of 2 numbers")));
+
+        // Lt, Lte, Gt, Gte require number
+        for op in ["lt", "lte", "gt", "gte"] {
+            let cond = CriteriaCondition {
+                field: field.clone(),
+                operator_raw: op.to_string(),
+                value: number_val.clone(),
+                operator: None,
+            };
+            let expr = CriteriaExpr::Condition(cond);
+            let errors = validate_criteria_expr(&expr, path);
+            assert!(errors.is_empty(), "{op} should accept number");
+            let cond = CriteriaCondition {
+                field: field.clone(),
+                operator_raw: op.to_string(),
+                value: string_val.clone(),
+                operator: None,
+            };
+            let expr = CriteriaExpr::Condition(cond);
+            let errors = validate_criteria_expr(&expr, path);
+            assert!(
+                errors.iter().any(|e| e.contains("must be a number")),
+                "{op} should reject non-number"
+            );
+        }
+
+        // Cidr requires string
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "cidr".to_string(),
+            value: string_val.clone(),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors.is_empty());
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "cidr".to_string(),
+            value: number_val.clone(),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors
+            .iter()
+            .any(|e| e.contains("must be a string (IP or CIDR)")));
+
+        // IsNull requires no value
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "is_null".to_string(),
+            value: null_val,
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors.is_empty());
+        let cond = CriteriaCondition {
+            field: field.clone(),
+            operator_raw: "is_null".to_string(),
+            value: string_val.clone(),
+            operator: None,
+        };
+        let expr = CriteriaExpr::Condition(cond);
+        let errors = validate_criteria_expr(&expr, path);
+        assert!(errors.iter().any(|e| e.contains("must not have a value")));
     }
 }

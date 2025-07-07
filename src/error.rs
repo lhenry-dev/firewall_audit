@@ -112,3 +112,67 @@ impl FirewallAuditError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_rule_structure_constructor() {
+        let err = FirewallAuditError::invalid_rule_structure(42, "bad struct");
+        match err {
+            FirewallAuditError::InvalidRuleStructure { index, ref message } => {
+                assert_eq!(index, 42);
+                assert_eq!(message, "bad struct");
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_unknown_operator_constructor() {
+        let err = FirewallAuditError::unknown_operator("foo", "path");
+        match err {
+            FirewallAuditError::UnknownOperator {
+                ref operator,
+                ref path,
+            } => {
+                assert_eq!(operator, "foo");
+                assert_eq!(path, "path");
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_unknown_field_constructor() {
+        let err = FirewallAuditError::unknown_field("bar", "path2");
+        match err {
+            FirewallAuditError::UnknownField {
+                ref field,
+                ref path,
+            } => {
+                assert_eq!(field, "bar");
+                assert_eq!(path, "path2");
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+
+    #[test]
+    fn test_invalid_operator_value_constructor() {
+        let err = FirewallAuditError::invalid_operator_value("baz", "p", "msg");
+        match err {
+            FirewallAuditError::InvalidOperatorValue {
+                ref operator,
+                ref path,
+                ref message,
+            } => {
+                assert_eq!(operator, "baz");
+                assert_eq!(path, "p");
+                assert_eq!(message, "msg");
+            }
+            _ => panic!("Wrong variant"),
+        }
+    }
+}

@@ -353,178 +353,14 @@ pub fn eval_criteria(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
 
 #[cfg(test)]
 mod tests {
-
-    use serde_yaml::Value;
-
     use crate::{
         criteria::eval::{
             eval_cmp, eval_contains, eval_ends_with, eval_equals, eval_in_range, eval_is_null,
-            eval_matches, eval_regex, eval_starts_with, eval_wildcard,
+            eval_matches, eval_regex, eval_starts_with, eval_wildcard, get_field_value,
         },
-        CriteriaOperator,
+        CriteriaOperator, FirewallRule,
     };
-
-    #[test]
-    fn test_eval_equals() {
-        assert!(eval_equals(
-            Some(&Value::String("foo".to_string())),
-            Some(&Value::String("foo".to_string()))
-        ));
-        assert!(!eval_equals(
-            Some(&Value::String("foo".to_string())),
-            Some(&Value::String("bar".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_matches() {
-        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
-        assert!(eval_matches(Some(&seq), Some(&Value::Number(22.into()))));
-        assert!(!eval_matches(Some(&seq), Some(&Value::Number(23.into()))));
-    }
-
-    #[test]
-    fn test_eval_starts_ends_contains() {
-        assert!(eval_starts_with(
-            Some(&Value::String("foobar".to_string())),
-            Some(&Value::String("foo".to_string()))
-        ));
-        assert!(eval_ends_with(
-            Some(&Value::String("foobar".to_string())),
-            Some(&Value::String("bar".to_string()))
-        ));
-        assert!(eval_contains(
-            Some(&Value::String("foobar".to_string())),
-            Some(&Value::String("oba".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_regex_wildcard() {
-        assert!(eval_regex(
-            Some(&Value::String("abc123".to_string())),
-            Some(&Value::String("abc.*".to_string()))
-        ));
-        assert!(eval_wildcard(
-            Some(&Value::String("file.txt".to_string())),
-            Some(&Value::String("*.txt".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_in_range_cmp() {
-        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
-        let range = Value::Sequence(vec![Value::Number(20.into()), Value::Number(90.into())]);
-        assert!(eval_in_range(Some(&seq), Some(&range)));
-        assert!(eval_cmp(
-            CriteriaOperator::Gt,
-            Some(&Value::Number(5.into())),
-            Some(&Value::Number(2.into()))
-        ));
-        assert!(!eval_cmp(
-            CriteriaOperator::Lt,
-            Some(&Value::Number(5.into())),
-            Some(&Value::Number(2.into()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_is_null() {
-        assert!(eval_is_null(None));
-        assert!(!eval_is_null(Some(&Value::String("foo".to_string()))));
-    }
-
-    #[test]
-    fn test_eval_matches_various_types() {
-        let val = Value::Number(22.into());
-        assert!(!eval_matches(
-            Some(&val),
-            Some(&Value::String("foo".to_string()))
-        ));
-        let val = Value::Bool(true);
-        assert!(!eval_matches(Some(&val), Some(&Value::Bool(false))));
-    }
-
-    #[test]
-    fn test_eval_contains_ip_sequence() {
-        let seq = Value::Sequence(vec![
-            Value::String("127.0.0.1".to_string()),
-            Value::String("0.0.0.0".to_string()),
-        ]);
-        assert!(eval_contains(
-            Some(&seq),
-            Some(&Value::String("127.0.0.1".to_string()))
-        ));
-        assert!(!eval_contains(
-            Some(&seq),
-            Some(&Value::String("192.168.1.1".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_regex_invalid_pattern() {
-        assert!(!eval_regex(
-            Some(&Value::String("abc".to_string())),
-            Some(&Value::String("[".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_wildcard_non_string() {
-        assert!(!eval_wildcard(
-            Some(&Value::Number(1.into())),
-            Some(&Value::String("*".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_in_range_wrong_type() {
-        let val = Value::String("notalist".to_string());
-        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
-        assert!(!eval_in_range(Some(&val), Some(&range)));
-    }
-
-    #[test]
-    fn test_eval_cmp_non_number() {
-        assert!(!eval_cmp(
-            CriteriaOperator::Gt,
-            Some(&Value::String("foo".to_string())),
-            Some(&Value::String("bar".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_matches_empty_sequence() {
-        let seq = Value::Sequence(vec![]);
-        assert!(!eval_matches(Some(&seq), Some(&Value::Number(1.into()))));
-    }
-
-    #[test]
-    fn test_eval_contains_empty_sequence() {
-        let seq = Value::Sequence(vec![]);
-        assert!(!eval_contains(
-            Some(&seq),
-            Some(&Value::String("foo".to_string()))
-        ));
-    }
-
-    #[test]
-    fn test_eval_in_range_empty_sequence() {
-        let seq = Value::Sequence(vec![]);
-        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
-        assert!(!eval_in_range(Some(&seq), Some(&range)));
-    }
-
-    #[test]
-    fn test_eval_cmp_nulls() {
-        assert!(!eval_cmp(CriteriaOperator::Gt, None, None));
-    }
-}
-
-#[cfg(test)]
-mod coverage_get_field_value {
-    use crate::{criteria::eval::get_field_value, firewall_rule::FirewallRule};
-
+    use serde_yaml::Value;
     #[test]
     fn test_get_field_value_all_fields() {
         let rule = FirewallRule {
@@ -553,7 +389,325 @@ mod coverage_get_field_value {
             let v = get_field_value(&rule, f);
             assert!(v.is_some(), "field {f} should be Some");
         }
-
         assert!(get_field_value(&rule, "notafield").is_none());
+    }
+    #[test]
+    fn test_eval_equals() {
+        assert!(eval_equals(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("foo".to_string()))
+        ));
+        assert!(!eval_equals(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_matches() {
+        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
+        assert!(eval_matches(Some(&seq), Some(&Value::Number(22.into()))));
+        assert!(!eval_matches(Some(&seq), Some(&Value::Number(23.into()))));
+    }
+    #[test]
+    fn test_eval_starts_ends_contains() {
+        assert!(eval_starts_with(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("foo".to_string()))
+        ));
+        assert!(eval_ends_with(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+        assert!(eval_contains(
+            Some(&Value::String("foobar".to_string())),
+            Some(&Value::String("oba".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_regex_wildcard() {
+        assert!(eval_regex(
+            Some(&Value::String("abc123".to_string())),
+            Some(&Value::String("abc.*".to_string()))
+        ));
+        assert!(eval_wildcard(
+            Some(&Value::String("file.txt".to_string())),
+            Some(&Value::String("*.txt".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_in_range_cmp() {
+        let seq = Value::Sequence(vec![Value::Number(22.into()), Value::Number(80.into())]);
+        let range = Value::Sequence(vec![Value::Number(20.into()), Value::Number(90.into())]);
+        assert!(eval_in_range(Some(&seq), Some(&range)));
+        assert!(eval_cmp(
+            CriteriaOperator::Gt,
+            Some(&Value::Number(5.into())),
+            Some(&Value::Number(2.into()))
+        ));
+        assert!(!eval_cmp(
+            CriteriaOperator::Lt,
+            Some(&Value::Number(5.into())),
+            Some(&Value::Number(2.into()))
+        ));
+    }
+    #[test]
+    fn test_eval_is_null() {
+        assert!(eval_is_null(None));
+        assert!(!eval_is_null(Some(&Value::String("foo".to_string()))));
+    }
+    #[test]
+    fn test_eval_matches_various_types() {
+        let val = Value::Number(22.into());
+        assert!(!eval_matches(
+            Some(&val),
+            Some(&Value::String("foo".to_string()))
+        ));
+        let val = Value::Bool(true);
+        assert!(!eval_matches(Some(&val), Some(&Value::Bool(false))));
+    }
+    #[test]
+    fn test_eval_contains_ip_sequence() {
+        let seq = Value::Sequence(vec![
+            Value::String("127.0.0.1".to_string()),
+            Value::String("0.0.0.0".to_string()),
+        ]);
+        assert!(eval_contains(
+            Some(&seq),
+            Some(&Value::String("127.0.0.1".to_string()))
+        ));
+        assert!(!eval_contains(
+            Some(&seq),
+            Some(&Value::String("192.168.1.1".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_regex_invalid_pattern() {
+        assert!(!eval_regex(
+            Some(&Value::String("abc".to_string())),
+            Some(&Value::String("[".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_wildcard_non_string() {
+        assert!(!eval_wildcard(
+            Some(&Value::Number(1.into())),
+            Some(&Value::String("*".to_string()))
+        ));
+        assert!(!eval_wildcard(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::Number(1.into()))
+        ));
+    }
+    #[test]
+    fn test_eval_in_range_wrong_type() {
+        let val = Value::String("notalist".to_string());
+        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        assert!(!eval_in_range(Some(&val), Some(&range)));
+    }
+    #[test]
+    fn test_eval_cmp_non_number() {
+        assert!(!eval_cmp(
+            CriteriaOperator::Gt,
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_matches_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        assert!(!eval_matches(Some(&seq), Some(&Value::Number(1.into()))));
+    }
+    #[test]
+    fn test_eval_contains_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        assert!(!eval_contains(
+            Some(&seq),
+            Some(&Value::String("foo".to_string()))
+        ));
+    }
+    #[test]
+    fn test_eval_in_range_empty_sequence() {
+        let seq = Value::Sequence(vec![]);
+        let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        assert!(!eval_in_range(Some(&seq), Some(&range)));
+    }
+    #[test]
+    fn test_eval_cmp_nulls() {
+        assert!(!eval_cmp(CriteriaOperator::Gt, None, None));
+    }
+}
+
+#[cfg(test)]
+mod extra_coverage {
+    use super::*;
+    use serde_yaml::Value;
+
+    #[test]
+    fn test_eval_matches_all_branches() {
+        let seq = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        let list = Value::Sequence(vec![Value::Number(2.into()), Value::Number(3.into())]);
+        assert!(super::eval_matches(Some(&seq), Some(&list)));
+        assert!(super::eval_matches(
+            Some(&seq),
+            Some(&Value::Number(1.into()))
+        ));
+        assert!(super::eval_matches(
+            Some(&Value::Number(2.into())),
+            Some(&list)
+        ));
+        assert!(super::eval_matches(
+            Some(&Value::Number(2.into())),
+            Some(&Value::Number(2.into()))
+        ));
+        assert!(!super::eval_matches(None, None));
+        assert!(!super::eval_matches(
+            Some(&Value::Bool(true)),
+            Some(&Value::Null)
+        ));
+    }
+
+    #[test]
+    fn test_eval_contains_ip_and_else() {
+        let seq = Value::Sequence(vec![Value::String("127.0.0.1".to_string())]);
+        assert!(super::eval_contains(
+            Some(&seq),
+            Some(&Value::String("127.0.0.1".to_string()))
+        ));
+        let seq = Value::Sequence(vec![Value::String("foo".to_string())]);
+        assert!(super::eval_contains(
+            Some(&seq),
+            Some(&Value::String("foo".to_string()))
+        ));
+        let seq = Value::Sequence(vec![Value::String("127.0.0.1".to_string())]);
+        let list = Value::Sequence(vec![Value::String("127.0.0.1".to_string())]);
+        assert!(super::eval_contains(Some(&seq), Some(&list)));
+        assert!(!super::eval_contains(
+            Some(&Value::Bool(true)),
+            Some(&Value::Null)
+        ));
+    }
+
+    #[test]
+    fn test_eval_regex_and_wildcard_else() {
+        assert!(!super::eval_regex(
+            Some(&Value::String("abc".to_string())),
+            Some(&Value::String("[".to_string()))
+        ));
+        assert!(!super::eval_regex(
+            Some(&Value::Bool(true)),
+            Some(&Value::Null)
+        ));
+        assert!(!super::eval_wildcard(
+            Some(&Value::Number(1.into())),
+            Some(&Value::String("*".to_string()))
+        ));
+        assert!(!super::eval_wildcard(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::Number(1.into()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_cidr_all_branches() {
+        let seq = Value::Sequence(vec![Value::String("127.0.0.1".to_string())]);
+        assert!(super::eval_cidr(
+            Some(&seq),
+            Some(&Value::String("127.0.0.0/8".to_string()))
+        ));
+        assert!(super::eval_cidr(
+            Some(&Value::String("127.0.0.1".to_string())),
+            Some(&Value::String("127.0.0.0/8".to_string()))
+        ));
+        assert!(!super::eval_cidr(
+            Some(&Value::String("notanip".to_string())),
+            Some(&Value::String("notacidr".to_string()))
+        ));
+        assert!(!super::eval_cidr(
+            Some(&Value::Bool(true)),
+            Some(&Value::Null)
+        ));
+    }
+
+    #[test]
+    fn test_eval_application_exists_and_service_exists() {
+        assert!(!super::eval_application_exists(Some(&Value::Bool(true))));
+        assert!(!super::eval_service_exists(Some(&Value::Bool(true))));
+        assert!(!super::eval_application_exists(Some(&Value::String(
+            "/unlikely/path/to/file".to_string()
+        ))));
+        assert!(!super::eval_service_exists(Some(&Value::String(
+            "unlikely_service_name_123456".to_string()
+        ))));
+    }
+
+    #[test]
+    fn test_eval_not_all_branches() {
+        assert!(super::eval_not(
+            Some(&Value::String("foo".to_string())),
+            Some(&Value::String("bar".to_string()))
+        ));
+        let list = Value::Sequence(vec![
+            Value::String("bar".to_string()),
+            Value::Number(1.into()),
+        ]);
+        assert!(super::eval_not(
+            Some(&Value::String("foo".to_string())),
+            Some(&list)
+        ));
+        let seq = Value::Sequence(vec![
+            Value::String("foo".to_string()),
+            Value::Number(1.into()),
+        ]);
+        assert!(super::eval_not(
+            Some(&seq),
+            Some(&Value::String("bar".to_string()))
+        ));
+        assert!(super::eval_not(Some(&seq), Some(&Value::Number(2.into()))));
+        let seq2 = Value::Sequence(vec![Value::String("baz".to_string())]);
+        assert!(super::eval_not(Some(&seq), Some(&seq2)));
+        assert!(!super::eval_not(
+            Some(&Value::Number(1.into())),
+            Some(&Value::Number(1.into()))
+        ));
+    }
+
+    #[test]
+    fn test_eval_condition_and_criteria_else_branches() {
+        let rule = FirewallRule {
+            name: "n".into(),
+            direction: "d".into(),
+            enabled: true,
+            action: "a".into(),
+            description: None,
+            application_name: None,
+            service_name: None,
+            protocol: None,
+            local_ports: None,
+            remote_ports: None,
+            local_addresses: None,
+            remote_addresses: None,
+            icmp_types_and_codes: None,
+            interfaces: None,
+            interface_types: None,
+            grouping: None,
+            profiles: None,
+            edge_traversal: None,
+            os: None,
+        };
+        let cond = CriteriaCondition {
+            field: "name".to_string(),
+            operator_raw: "notanop".to_string(),
+            value: Some(Value::String("foo".to_string())),
+            operator: None,
+        };
+        assert!(!super::eval_condition(&rule, &cond));
+        let expr = CriteriaExpr::Group { and: vec![] };
+        assert!(super::eval_criteria(&rule, &expr));
+        let expr = CriteriaExpr::OrGroup { or: vec![] };
+        assert!(!super::eval_criteria(&rule, &expr));
+        let expr = CriteriaExpr::NotGroup {
+            not: Box::new(CriteriaExpr::Group { and: vec![] }),
+        };
+        assert!(!super::eval_criteria(&rule, &expr));
     }
 }

@@ -115,7 +115,7 @@ impl CriteriaCondition {
 }
 
 #[cfg(test)]
-mod coverage {
+mod tests {
     use strum::IntoEnumIterator;
 
     use crate::CriteriaOperator;
