@@ -6,6 +6,10 @@ use windows_firewall::WindowsFirewallRule;
 pub struct WindowsFirewallProvider;
 
 impl FirewallRuleProvider for WindowsFirewallProvider {
+    /// Lists all firewall rules available from the Windows firewall.
+    ///
+    /// # Errors
+    /// Returns an error if the firewall rules cannot be listed.
     fn list_rules() -> Result<Vec<FirewallRule>> {
         windows_firewall::list_rules()
             .map(|rules| rules.iter().map(FirewallRule::from).collect())
@@ -47,10 +51,10 @@ mod tests {
 
     #[test]
     fn test_list_rules_error() {
-        // On ne peut pas vraiment tester list_rules sans accès à l'API Windows
-        // mais on vérifie que l'appel ne panique pas (mock)
+        // We cannot really test list_rules without access to the Windows API
+        // but we check that the call does not panic (mock)
         let res = WindowsFirewallProvider::list_rules();
-        // On accepte Ok ou Err, mais pas de panic
+        // Accept Ok or Err, but no panic
         assert!(res.is_ok() || res.is_err());
     }
 }

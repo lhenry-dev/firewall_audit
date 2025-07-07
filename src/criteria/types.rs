@@ -28,6 +28,7 @@ pub struct AuditRule {
     PartialEq,
     strum_macros::EnumString,
     strum_macros::AsRefStr,
+    strum_macros::EnumIter,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum CriteriaOperator {
@@ -115,30 +116,13 @@ impl CriteriaCondition {
 
 #[cfg(test)]
 mod coverage {
-    use super::*;
+    use strum::IntoEnumIterator;
+
+    use crate::CriteriaOperator;
+
     #[test]
     fn test_expected_type_all_variants() {
-        use CriteriaOperator::*;
-        let all = [
-            Equals,
-            Not,
-            Matches,
-            StartsWith,
-            EndsWith,
-            Regex,
-            Wildcard,
-            Contains,
-            InRange,
-            Lt,
-            Lte,
-            Gt,
-            Gte,
-            Cidr,
-            IsNull,
-            ApplicationExists,
-            ServiceExists,
-        ];
-        for op in all.iter() {
+        for op in CriteriaOperator::iter() {
             let t = op.expected_type();
             assert!(
                 !t.is_empty(),

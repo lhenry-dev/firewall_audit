@@ -103,11 +103,14 @@ mod platform {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::FirewallRule;
+
     #[test]
     fn test_list_rules_compiles() {
         #[cfg(target_os = "windows")]
         {
+            use crate::FirewallRuleProvider;
+
             let rules = crate::firewall_rule::platform::WindowsFirewallProvider::list_rules();
             match rules {
                 Ok(rules) => {

@@ -22,11 +22,9 @@ mod criteria;
 mod error;
 mod export;
 mod firewall_rule;
+mod loader;
 
-pub use audit::{
-    load_audit_criteria_json, load_audit_criteria_multi, load_audit_criteria_yaml,
-    run_audit_multi_with_criteria,
-};
+pub use audit::run_audit_multi_with_criteria;
 pub use criteria::{AuditRule, CriteriaCondition, CriteriaExpr, CriteriaOperator};
 pub use error::{FirewallAuditError, Result};
 pub use export::{
@@ -36,3 +34,4 @@ pub use export::{
 pub use firewall_rule::FirewallProvider;
 pub use firewall_rule::FirewallRule;
 pub use firewall_rule::FirewallRuleProvider;
+pub use loader::load_audit_criteria_multi;

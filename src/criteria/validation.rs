@@ -119,8 +119,11 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::criteria::types::{CriteriaCondition, CriteriaExpr};
+
+    use crate::criteria::{
+        types::{CriteriaCondition, CriteriaExpr},
+        validation::validate_criteria_expr,
+    };
     use serde_yaml::Value;
 
     #[test]
@@ -409,30 +412,11 @@ mod tests {
 #[cfg(test)]
 mod coverage {
     use crate::criteria::types::CriteriaOperator;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_expected_type_all_variants() {
-        use CriteriaOperator::*;
-        let all = [
-            Equals,
-            Not,
-            Matches,
-            StartsWith,
-            EndsWith,
-            Regex,
-            Wildcard,
-            Contains,
-            InRange,
-            Lt,
-            Lte,
-            Gt,
-            Gte,
-            Cidr,
-            IsNull,
-            ApplicationExists,
-            ServiceExists,
-        ];
-        for op in all.iter() {
+        for op in CriteriaOperator::iter() {
             let t = op.expected_type();
             assert!(
                 !t.is_empty(),

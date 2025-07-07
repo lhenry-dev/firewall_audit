@@ -139,6 +139,10 @@ impl From<&LinuxFirewallRule> for FirewallRule {
 }
 
 impl FirewallRuleProvider for LinuxFirewallProvider {
+    /// Lists all firewall rules available from the Linux firewall.
+    ///
+    /// # Errors
+    /// Returns an error if the firewall rules cannot be listed.
     fn list_rules() -> Result<Vec<FirewallRule>> {
         let output = Command::new("sudo").arg("iptables").arg("-S").output();
         if let Ok(out) = output {

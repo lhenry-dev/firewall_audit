@@ -1,6 +1,6 @@
 use crate::audit::run::AuditMatch;
 
-/// Returns a summary phrase for the audit output (for console display).
+/// Returns a summary phrase for the audit output for console display.
 ///
 /// # Arguments
 /// * `audit_results` - The audit results as a vector of `AuditMatch`
@@ -30,8 +30,7 @@ pub fn audit_summary_phrase(audit_results: &[AuditMatch]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::audit::run::AuditMatch;
+    use crate::{audit::run::AuditMatch, audit_summary_phrase};
 
     #[test]
     fn test_audit_summary_phrase() {

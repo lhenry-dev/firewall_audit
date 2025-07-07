@@ -20,8 +20,7 @@ pub fn export_text(audit_results: &[AuditMatch]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::audit::run::AuditMatch;
+    use crate::{audit::run::AuditMatch, export_text};
 
     #[test]
     fn test_export_text_empty() {

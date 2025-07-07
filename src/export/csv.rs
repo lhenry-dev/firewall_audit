@@ -1,16 +1,9 @@
-use crate::audit::run::AuditMatch;
 use std::fs::File;
 use std::io::{self, Write};
 
-/// Export the audit result (Vec<AuditMatch>) to CSV format in a file or return the CSV as a String.
-///
-/// # Arguments
-/// * `audit_results` - The audit results as a vector of `AuditMatch`
-/// * `path` - Optional output file path. If None, returns the CSV as a String.
-///
-/// # Returns
-/// * `Ok(String)` - The CSV content (also written to file if path is Some)
-/// * `Err(io::Error)` - If writing to file fails
+use crate::audit::run::AuditMatch;
+
+/// Exports the audit results to CSV format, writing to a file if a path is provided.
 ///
 /// # Errors
 /// Returns an error if writing to the file fails.
@@ -43,8 +36,7 @@ pub fn export_csv(audit_results: &[AuditMatch], path: Option<&str>) -> io::Resul
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::audit::run::AuditMatch;
+    use crate::{audit::run::AuditMatch, export_csv};
 
     #[test]
     fn test_export_csv_format() {

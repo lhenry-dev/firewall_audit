@@ -41,15 +41,7 @@ pub struct JsonAuditResult {
     pub results: Vec<JsonAuditBlock>,
 }
 
-/// Export the audit result (Vec<AuditMatch>) to JSON format in a file or return the JSON as a String.
-///
-/// # Arguments
-/// * `audit_results` - The audit results as a vector of `AuditMatch`
-/// * `path` - Optional output file path. If None, returns the JSON as a String.
-///
-/// # Returns
-/// * `Ok(String)` - The JSON content (also written to file if path is Some)
-/// * `Err(FirewallAuditError)` - If writing to file or serializing fails
+/// Exports the audit results to JSON format, writing to a file if a path is provided.
 ///
 /// # Errors
 /// Returns an error if writing to the file or serializing fails.
@@ -100,8 +92,7 @@ pub fn export_json(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::audit::run::AuditMatch;
+    use crate::{audit::run::AuditMatch, export_json};
 
     #[test]
     fn test_export_json_format() {
@@ -124,7 +115,7 @@ mod tests {
         assert!(v.get("summary").is_some());
         assert!(v.get("results").is_some());
         let results = v.get("results").unwrap().as_array().unwrap();
-        assert_eq!(results.len(), 2); // 2 rules with matches
+        assert_eq!(results.len(), 2);
         let ids: Vec<_> = results
             .iter()
             .map(|r| r.get("id").unwrap().as_str().unwrap())

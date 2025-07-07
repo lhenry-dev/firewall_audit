@@ -9,6 +9,7 @@ use std::process::Command;
 
 pub fn get_field_value(rule: &FirewallRule, field: &str) -> Option<Value> {
     match field {
+        "os" => Some(Value::String(rule.os.clone()?)),
         "name" => Some(Value::String(rule.name.clone())),
         "direction" => Some(Value::String(rule.direction.clone())),
         "enabled" => Some(Value::Bool(rule.enabled)),
@@ -352,8 +353,16 @@ pub fn eval_criteria(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use serde_yaml::Value;
+
+    use crate::{
+        criteria::eval::{
+            eval_cmp, eval_contains, eval_ends_with, eval_equals, eval_in_range, eval_is_null,
+            eval_matches, eval_regex, eval_starts_with, eval_wildcard,
+        },
+        CriteriaOperator,
+    };
 
     #[test]
     fn test_eval_equals() {
@@ -427,7 +436,6 @@ mod tests {
 
     #[test]
     fn test_eval_matches_various_types() {
-        // Test avec des types inattendus
         let val = Value::Number(22.into());
         assert!(!eval_matches(
             Some(&val),
@@ -439,7 +447,6 @@ mod tests {
 
     #[test]
     fn test_eval_contains_ip_sequence() {
-        // Test IP dans une séquence
         let seq = Value::Sequence(vec![
             Value::String("127.0.0.1".to_string()),
             Value::String("0.0.0.0".to_string()),
@@ -456,7 +463,6 @@ mod tests {
 
     #[test]
     fn test_eval_regex_invalid_pattern() {
-        // Regex invalide
         assert!(!eval_regex(
             Some(&Value::String("abc".to_string())),
             Some(&Value::String("[".to_string()))
@@ -465,7 +471,6 @@ mod tests {
 
     #[test]
     fn test_eval_wildcard_non_string() {
-        // Wildcard sur non-string
         assert!(!eval_wildcard(
             Some(&Value::Number(1.into())),
             Some(&Value::String("*".to_string()))
@@ -474,7 +479,6 @@ mod tests {
 
     #[test]
     fn test_eval_in_range_wrong_type() {
-        // Mauvais type pour in_range
         let val = Value::String("notalist".to_string());
         let range = Value::Sequence(vec![Value::Number(1.into()), Value::Number(2.into())]);
         assert!(!eval_in_range(Some(&val), Some(&range)));
@@ -482,7 +486,6 @@ mod tests {
 
     #[test]
     fn test_eval_cmp_non_number() {
-        // Comparaison avec des strings non convertibles
         assert!(!eval_cmp(
             CriteriaOperator::Gt,
             Some(&Value::String("foo".to_string())),
@@ -520,8 +523,7 @@ mod tests {
 
 #[cfg(test)]
 mod coverage_get_field_value {
-    use super::*;
-    use crate::firewall_rule::FirewallRule;
+    use crate::{criteria::eval::get_field_value, firewall_rule::FirewallRule};
 
     #[test]
     fn test_get_field_value_all_fields() {
@@ -546,31 +548,12 @@ mod coverage_get_field_value {
             edge_traversal: Some(false),
             os: Some("linux".into()),
         };
-        let fields = [
-            "name",
-            "direction",
-            "enabled",
-            "action",
-            "description",
-            "application_name",
-            "service_name",
-            "protocol",
-            "local_ports",
-            "remote_ports",
-            "local_addresses",
-            "remote_addresses",
-            "icmp_types_and_codes",
-            "interfaces",
-            "interface_types",
-            "grouping",
-            "profiles",
-            "edge_traversal",
-        ];
+        let fields = FirewallRule::valid_fields();
         for f in fields.iter() {
             let v = get_field_value(&rule, f);
             assert!(v.is_some(), "field {f} should be Some");
         }
-        // Champ inconnu
+
         assert!(get_field_value(&rule, "notafield").is_none());
     }
 }

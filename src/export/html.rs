@@ -1,16 +1,9 @@
-use crate::audit::run::AuditMatch;
 use std::fs::File;
 use std::io::{self, Write};
 
-/// Export the audit result (Vec<AuditMatch>) to HTML format in a file or return the HTML as a String.
-///
-/// # Arguments
-/// * `audit_results` - The audit results as a vector of `AuditMatch`
-/// * `path` - Optional output file path. If None, returns the HTML as a String.
-///
-/// # Returns
-/// * `Ok(String)` - The HTML content (also written to file if path is Some)
-/// * `Err(io::Error)` - If writing to file fails
+use crate::audit::run::AuditMatch;
+
+/// Exports the audit results to HTML format, writing to a file if a path is provided.
 ///
 /// # Errors
 /// Returns an error if writing to the file fails.
@@ -86,8 +79,7 @@ pub fn export_html(audit_results: &[AuditMatch], path: Option<&str>) -> io::Resu
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::audit::run::AuditMatch;
+    use crate::{audit::run::AuditMatch, export_html};
 
     #[test]
     fn test_export_html_format() {
