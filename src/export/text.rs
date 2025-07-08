@@ -10,12 +10,12 @@ pub fn export_text(audit_results: &[AuditMatch]) -> String {
         writeln!(&mut output, "Severity: {}", audit.severity).unwrap();
         writeln!(
             &mut output,
-            "   [32m [1m [0m {} match(es) found:",
+            "\t{} match(es) found:",
             audit.matched_firewall_rules.len()
         )
         .unwrap();
         for name in &audit.matched_firewall_rules {
-            writeln!(&mut output, "    - {name}").unwrap();
+            writeln!(&mut output, "\t- {name}").unwrap();
         }
     }
     output

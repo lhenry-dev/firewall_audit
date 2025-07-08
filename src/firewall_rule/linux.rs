@@ -162,7 +162,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
             remote_ports,
             local_addresses,
             remote_addresses,
-            icmp_types_and_codes: None, // parse if needed
+            icmp_types_and_codes: None,
             interfaces,
             interface_types: None,
             grouping: None,
@@ -292,7 +292,7 @@ mod tests {
     fn test_empty_tokens() {
         let rule = LinuxFirewallRule {
             tokens: vec![],
-            raw_line: "".into(),
+            raw_line: String::new(),
         };
         let fw = FirewallRule::from(&rule);
         assert_eq!(fw.name, "(unnamed)");

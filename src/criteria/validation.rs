@@ -2,31 +2,6 @@ use super::types::{CriteriaExpr, CriteriaOperator};
 use crate::firewall_rule::FirewallRule;
 use serde_yaml::Value;
 
-impl CriteriaOperator {
-    /// Returns the expected value type(s) for this operator as a string (for error messages)
-    pub fn expected_type(&self) -> &'static str {
-        match self {
-            // Any
-            Self::Equals | Self::Not | Self::Matches => "any (string, number, bool, list, ...)",
-            // String
-            Self::StartsWith
-            | Self::EndsWith
-            | Self::Regex
-            | Self::Wildcard
-            | Self::Contains
-            | Self::ApplicationExists
-            | Self::ServiceExists => "string",
-            // Number
-            Self::InRange => "list of 2 numbers",
-            Self::Lt | Self::Lte | Self::Gt | Self::Gte => "number",
-            // IP/network
-            Self::Cidr => "string (IP or CIDR)",
-            // Boolean/null
-            Self::IsNull => "(no value)",
-        }
-    }
-}
-
 pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
     let mut errors = Vec::new();
     match expr {
@@ -120,26 +95,11 @@ pub fn validate_criteria_expr(expr: &CriteriaExpr, path: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        criteria::{
-            types::{CriteriaCondition, CriteriaExpr},
-            validation::validate_criteria_expr,
-        },
-        CriteriaOperator,
+    use crate::criteria::{
+        types::{CriteriaCondition, CriteriaExpr},
+        validation::validate_criteria_expr,
     };
     use serde_yaml::Value;
-    use strum::IntoEnumIterator;
-
-    #[test]
-    fn test_expected_type_all_variants() {
-        for op in CriteriaOperator::iter() {
-            let t = op.expected_type();
-            assert!(
-                !t.is_empty(),
-                "expected_type for {op:?} should not be empty"
-            );
-        }
-    }
 
     #[test]
     fn test_validate_criteria_expr_unknown_field() {

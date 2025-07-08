@@ -114,21 +114,3 @@ impl CriteriaCondition {
         self.operator = self.operator_raw.parse::<CriteriaOperator>().ok();
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use strum::IntoEnumIterator;
-
-    use crate::CriteriaOperator;
-
-    #[test]
-    fn test_expected_type_all_variants() {
-        for op in CriteriaOperator::iter() {
-            let t = op.expected_type();
-            assert!(
-                !t.is_empty(),
-                "expected_type for {op:?} should not be empty"
-            );
-        }
-    }
-}

@@ -76,7 +76,6 @@ pub use crate::firewall_rule::linux::LinuxFirewallProvider as PlatformFirewallPr
 
 #[cfg(test)]
 mod tests {
-    use crate::FirewallRule;
     use crate::FirewallRuleProvider;
 
     #[test]
@@ -85,34 +84,19 @@ mod tests {
         {
             use crate::PlatformFirewallProvider;
 
-            let rules = PlatformFirewallProvider::list_rules();
-            match rules {
-                Ok(rules) => {
-                    for rule in rules {
-                        println!("{rule:?}");
-                    }
-                }
-                Err(e) => println!("Error: {e:?}"),
+            let rules = PlatformFirewallProvider::list_rules().unwrap();
+            for rule in rules {
+                println!("{rule:?}");
             }
         }
         #[cfg(target_os = "linux")]
         {
             use crate::firewall_rule::linux::LinuxFirewallProvider;
 
-            let rules = LinuxFirewallProvider::list_rules();
-            match rules {
-                Ok(rules) => {
-                    for rule in rules {
-                        println!("{rule:?}");
-                    }
-                }
-                Err(e) => println!("Error: {e:?}"),
+            let rules = LinuxFirewallProvider::list_rules().unwrap();
+            for rule in rules {
+                println!("{rule:?}");
             }
         }
-    }
-
-    #[test]
-    fn test_valid_fields_contains_name() {
-        assert!(FirewallRule::valid_fields().contains(&"name"));
     }
 }

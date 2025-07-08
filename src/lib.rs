@@ -27,11 +27,6 @@ mod loader;
 pub use audit::run_audit_multi_with_criteria;
 pub use criteria::{AuditRule, CriteriaCondition, CriteriaExpr, CriteriaOperator};
 pub use error::FirewallAuditError;
-pub use export::{
-    audit_summary_phrase, export_csv, export_html, export_json, export_text, JsonAuditBlock,
-    JsonAuditResult, JsonAuditSummary,
-};
-pub use firewall_rule::FirewallRule;
-pub use firewall_rule::FirewallRuleProvider;
-pub use firewall_rule::PlatformFirewallProvider;
+pub use export::{audit_summary_phrase, export_csv, export_html, export_json, export_text};
+pub use firewall_rule::{FirewallRule, FirewallRuleProvider, PlatformFirewallProvider};
 pub use loader::load_audit_criteria_multi;

@@ -42,17 +42,3 @@ impl From<&WindowsFirewallRule> for FirewallRule {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use windows_firewall::list_rules;
-
-    #[test]
-    fn test_list_rules_error() {
-        // We cannot really test list_rules without access to the Windows API
-        // but we check that the call does not panic (mock)
-        let res = list_rules();
-        // Accept Ok or Err, but no panic
-        assert!(res.is_ok() || res.is_err());
-    }
-}

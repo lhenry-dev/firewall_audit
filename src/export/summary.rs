@@ -1,12 +1,6 @@
 use crate::audit::run::AuditMatch;
 
 /// Returns a summary phrase for the audit output for console display.
-///
-/// # Arguments
-/// * `audit_results` - The audit results as a vector of `AuditMatch`
-///
-/// # Returns
-/// * `String` - The summary phrase (e.g., "X problem(s) detected..." or "No problem detected...")
 pub fn audit_summary_phrase(audit_results: &[AuditMatch]) -> String {
     let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
         match a.severity.to_lowercase().as_str() {

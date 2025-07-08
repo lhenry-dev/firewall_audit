@@ -7,7 +7,7 @@ use std::net::IpAddr;
 use std::path::Path;
 use std::process::Command;
 
-pub fn get_field_value(rule: &FirewallRule, field: &str) -> Option<Value> {
+fn get_field_value(rule: &FirewallRule, field: &str) -> Option<Value> {
     match field {
         "os" => Some(Value::String(rule.os.clone()?)),
         "name" => Some(Value::String(rule.name.clone())),
@@ -314,7 +314,7 @@ fn eval_not(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
     }
 }
 
-pub fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
+fn eval_condition(rule: &FirewallRule, cond: &CriteriaCondition) -> bool {
     let mut cond = cond.clone();
     cond.parse_operator();
     let Some(op) = &cond.operator else {

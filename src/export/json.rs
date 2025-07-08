@@ -4,41 +4,27 @@ use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
 
-/// Represents a single audit block for JSON export.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct JsonAuditBlock {
-    /// Rule ID
     pub id: String,
-    /// Rule description
     pub description: String,
-    /// Rule severity
     pub severity: String,
-    /// List of matching firewall rules
     pub matches: Vec<String>,
 }
 
-/// Represents the summary of audit results for JSON export.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct JsonAuditSummary {
-    /// Number of high severity rules
     pub high: usize,
-    /// Number of medium severity rules
     pub medium: usize,
-    /// Number of low severity rules
     pub low: usize,
-    /// Number of info severity rules
     pub info: usize,
-    /// Total number of rules
     pub total: usize,
 }
 
-/// Represents the full audit result for JSON export.
-#[derive(Debug, Serialize)]
-pub struct JsonAuditResult {
-    /// Summary of the audit
-    pub summary: JsonAuditSummary,
-    /// List of audit blocks
-    pub results: Vec<JsonAuditBlock>,
+#[derive(Serialize)]
+struct JsonAuditResult {
+    summary: JsonAuditSummary,
+    results: Vec<JsonAuditBlock>,
 }
 
 /// Exports the audit results to JSON format, writing to a file if a path is provided.
