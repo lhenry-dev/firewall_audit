@@ -1,18 +1,21 @@
 use crate::audit::run::AuditMatch;
+use std::fmt::Write as _;
 
 /// Formats audit results as a human-readable text string for CLI output.
 pub fn export_text(audit_results: &[AuditMatch]) -> String {
     let mut output = String::new();
     for audit in audit_results {
-        output.push_str(&format!("\nAudit Rule: {}\n", audit.rule_id));
-        output.push_str(&format!("Description: {}\n", audit.description));
-        output.push_str(&format!("Severity: {}\n", audit.severity));
-        output.push_str(&format!(
-            "  ✅ {} match(es) found:\n",
+        writeln!(&mut output, "\nAudit Rule: {}", audit.rule_id).unwrap();
+        writeln!(&mut output, "Description: {}", audit.description).unwrap();
+        writeln!(&mut output, "Severity: {}", audit.severity).unwrap();
+        writeln!(
+            &mut output,
+            "   [32m [1m [0m {} match(es) found:",
             audit.matched_firewall_rules.len()
-        ));
+        )
+        .unwrap();
         for name in &audit.matched_firewall_rules {
-            output.push_str(&format!("    - {name}\n"));
+            writeln!(&mut output, "    - {name}").unwrap();
         }
     }
     output

@@ -8,7 +8,9 @@
 //! ```
 
 use clap::{Parser, ValueEnum};
-use firewall_audit::{export_csv, export_html, export_json, FirewallRuleProvider};
+use firewall_audit::{
+    export_csv, export_html, export_json, FirewallRuleProvider, PlatformFirewallProvider,
+};
 use std::process;
 use tracing::{error, info};
 
@@ -62,7 +64,7 @@ fn main() {
     }
 
     // Load firewall rules
-    let firewall_rules = firewall_audit::FirewallProvider::list_rules().unwrap_or_else(|e| {
+    let firewall_rules = PlatformFirewallProvider::list_rules().unwrap_or_else(|e| {
         error!("Error loading firewall rules: {}", e);
         process::exit(1);
     });

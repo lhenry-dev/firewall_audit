@@ -1,16 +1,14 @@
-use crate::error::{FirewallAuditError, Result};
+use crate::error::FirewallAuditError;
 use crate::firewall_rule::FirewallRule;
 use crate::firewall_rule::FirewallRuleProvider;
 use windows_firewall::WindowsFirewallRule;
 
+/// Windows implementation of the firewall rule provider.
+#[derive(Debug)]
 pub struct WindowsFirewallProvider;
 
 impl FirewallRuleProvider for WindowsFirewallProvider {
-    /// Lists all firewall rules available from the Windows firewall.
-    ///
-    /// # Errors
-    /// Returns an error if the firewall rules cannot be listed.
-    fn list_rules() -> Result<Vec<FirewallRule>> {
+    fn list_rules() -> Result<Vec<FirewallRule>, FirewallAuditError> {
         windows_firewall::list_rules()
             .map(|rules| rules.iter().map(FirewallRule::from).collect())
             .map_err(|e| FirewallAuditError::WindowsFirewallError(e.to_string()))
@@ -47,13 +45,13 @@ impl From<&WindowsFirewallRule> for FirewallRule {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use windows_firewall::list_rules;
 
     #[test]
     fn test_list_rules_error() {
         // We cannot really test list_rules without access to the Windows API
         // but we check that the call does not panic (mock)
-        let res = WindowsFirewallProvider::list_rules();
+        let res = list_rules();
         // Accept Ok or Err, but no panic
         assert!(res.is_ok() || res.is_err());
     }

@@ -339,7 +339,7 @@ mod audit {
                 name: if i == 42 {
                     "TestRule".to_string()
                 } else {
-                    format!("Rule-{}", i)
+                    format!("Rule-{i}")
                 },
                 direction: "In".to_string(),
                 enabled: true,
@@ -381,7 +381,7 @@ mod audit {
             }
         }
         // Parallel (via run_audit_multi_with_criteria)
-        let results = run_audit_multi_with_criteria(&[audit_rule.clone()], &fw_rules);
+        let results = run_audit_multi_with_criteria(&[audit_rule], &fw_rules);
         assert_eq!(results.len(), 1);
         let matches_par = &results[0].matched_firewall_rules;
         assert_eq!(matches_seq, *matches_par);
@@ -400,13 +400,13 @@ mod audit {
             application_name: Some("app.exe".to_string()),
             service_name: Some("svc".to_string()),
             protocol: Some("TCP".to_string()),
-            local_ports: Some([22, 80].iter().cloned().collect()),
-            remote_ports: Some([443].iter().cloned().collect()),
-            local_addresses: Some(["127.0.0.1".parse().unwrap()].iter().cloned().collect()),
-            remote_addresses: Some(["0.0.0.0".parse().unwrap()].iter().cloned().collect()),
+            local_ports: Some(std::iter::once(&22).copied().collect()),
+            remote_ports: Some(std::iter::once(&443).copied().collect()),
+            local_addresses: Some(std::iter::once("127.0.0.1".parse().unwrap()).collect()),
+            remote_addresses: Some(std::iter::once("0.0.0.0".parse().unwrap()).collect()),
             icmp_types_and_codes: Some("8:0".to_string()),
-            interfaces: Some(["eth0".to_string()].iter().cloned().collect()),
-            interface_types: Some(["lan".to_string()].iter().cloned().collect()),
+            interfaces: Some(std::iter::once("eth0".to_string()).collect()),
+            interface_types: Some(std::iter::once("lan".to_string()).collect()),
             grouping: Some("grp".to_string()),
             profiles: Some("Domain".to_string()),
             edge_traversal: Some(false),
@@ -498,7 +498,7 @@ mod audit {
                 operator: None,
             });
             let audit_rule = AuditRule {
-                id: format!("{}_{}_test", field, op),
+                id: format!("{field}_{op}_test"),
                 description: "desc".to_string(),
                 criteria: expr,
                 severity: "info".to_string(),
@@ -506,9 +506,9 @@ mod audit {
             };
             let results = run_audit_multi_with_criteria(&[audit_rule], &[fw_rule.clone()]);
             if should_match {
-                assert_eq!(results.len(), 1, "Should match for {} {}", field, op);
+                assert_eq!(results.len(), 1, "Should match for {field} {op}");
             } else {
-                assert!(results.is_empty(), "Should not match for {} {}", field, op);
+                assert!(results.is_empty(), "Should not match for {field} {op}");
             }
         }
     }
@@ -581,7 +581,7 @@ mod audit {
             edge_traversal: None,
             os: Some("linux".to_string()),
         };
-        use crate::criteria::types::CriteriaExpr;
+
         let expr = CriteriaExpr::Group {
             and: vec![
                 CriteriaExpr::Condition(CriteriaCondition {

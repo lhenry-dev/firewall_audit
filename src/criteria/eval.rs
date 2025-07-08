@@ -103,7 +103,7 @@ fn eval_contains(field_val: Option<&Value>, cond_val: Option<&Value>) -> bool {
     } else if let (Some(Value::Sequence(seq)), Some(Value::String(item))) = (field_val, cond_val) {
         // Try IP address comparison if possible
         item.parse::<std::net::IpAddr>().map_or_else(
-            |_| seq.iter().any(|v| v == cond_val.unwrap()),
+            |_| cond_val.is_some_and(|cond_val| seq.iter().any(|v| v == cond_val)),
             |ip_item| {
                 seq.iter().any(|v| match v {
                     Value::String(s) => s
@@ -372,20 +372,20 @@ mod tests {
             application_name: Some("app".into()),
             service_name: Some("svc".into()),
             protocol: Some("TCP".into()),
-            local_ports: Some([1u16].iter().cloned().collect()),
-            remote_ports: Some([2u16].iter().cloned().collect()),
-            local_addresses: Some(["127.0.0.1".parse().unwrap()].iter().cloned().collect()),
-            remote_addresses: Some(["0.0.0.0".parse().unwrap()].iter().cloned().collect()),
+            local_ports: Some(std::iter::once(&1u16).copied().collect()),
+            remote_ports: Some(std::iter::once(&2u16).copied().collect()),
+            local_addresses: Some(std::iter::once("127.0.0.1".parse().unwrap()).collect()),
+            remote_addresses: Some(std::iter::once("0.0.0.0".parse().unwrap()).collect()),
             icmp_types_and_codes: Some("8:0".into()),
-            interfaces: Some(["eth0".into()].iter().cloned().collect()),
-            interface_types: Some(["lan".into()].iter().cloned().collect()),
+            interfaces: Some(std::iter::once("eth0".to_string()).collect()),
+            interface_types: Some(std::iter::once("lan".to_string()).collect()),
             grouping: Some("grp".into()),
             profiles: Some("Domain".into()),
             edge_traversal: Some(false),
             os: Some("linux".into()),
         };
         let fields = FirewallRule::valid_fields();
-        for f in fields.iter() {
+        for f in fields {
             let v = get_field_value(&rule, f);
             assert!(v.is_some(), "field {f} should be Some");
         }

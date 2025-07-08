@@ -1,13 +1,18 @@
+use std::fmt::Write as _;
 use std::fs::File;
 use std::io::{self, Write};
 
 use crate::audit::run::AuditMatch;
+use crate::FirewallAuditError;
 
 /// Exports the audit results to HTML format, writing to a file if a path is provided.
 ///
 /// # Errors
 /// Returns an error if writing to the file fails.
-pub fn export_html(audit_results: &[AuditMatch], path: Option<&str>) -> io::Result<String> {
+pub fn export_html(
+    audit_results: &[AuditMatch],
+    path: Option<&str>,
+) -> Result<String, FirewallAuditError> {
     let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
         match a.severity.to_lowercase().as_str() {
             "high" => acc.0 += 1,
@@ -40,9 +45,10 @@ pub fn export_html(audit_results: &[AuditMatch], path: Option<&str>) -> io::Resu
     );
     let total = high + medium + low + info;
     if total > 0 {
-        html.push_str(&format!(
+        write!(
+            &mut html,
             "<div class='synth'>{total} problem(s) detected : <span class='sev-high-txt'>{high} critical(s)</span>, <span class='sev-medium-txt'>{medium} important(s)</span>, <span class='sev-low-txt'>{low} minor(s)</span>, <span class='sev-info-txt'>{info} informational(s)</span>.</div>"
-        ));
+        ).map_err(io::Error::other)?;
     }
     let mut any = false;
     for a in audit_results {
@@ -54,15 +60,17 @@ pub fn export_html(audit_results: &[AuditMatch], path: Option<&str>) -> io::Resu
             "info" => "sev-info",
             _ => "",
         };
-        html.push_str(&format!("<div class=\"rule {sev_class}\">"));
-        html.push_str(&format!(
+        write!(&mut html, "<div class=\"rule {sev_class}\">").map_err(io::Error::other)?;
+        write!(
+            &mut html,
             "<div><b>ID:</b> {}<br><b>Description:</b> {}<br><b>Severity:</b> {}</div>",
             a.rule_id, a.description, a.severity
-        ));
+        )
+        .map_err(io::Error::other)?;
         html.push_str("<details><summary>Show matching rules</summary>");
         html.push_str("<ul>");
         for m in &a.matched_firewall_rules {
-            html.push_str(&format!("<li>{m}</li>"));
+            write!(&mut html, "<li>{m}</li>").map_err(io::Error::other)?;
         }
         html.push_str("</ul></details></div>");
     }

@@ -1,13 +1,18 @@
+use std::fmt::Write as _;
 use std::fs::File;
 use std::io::{self, Write};
 
 use crate::audit::run::AuditMatch;
+use crate::FirewallAuditError;
 
 /// Exports the audit results to CSV format, writing to a file if a path is provided.
 ///
 /// # Errors
 /// Returns an error if writing to the file fails.
-pub fn export_csv(audit_results: &[AuditMatch], path: Option<&str>) -> io::Result<String> {
+pub fn export_csv(
+    audit_results: &[AuditMatch],
+    path: Option<&str>,
+) -> Result<String, FirewallAuditError> {
     let mut csv = String::from("rule_id,description,severity,matches\n");
     for a in audit_results {
         let match_str = a.matched_firewall_rules.join("|");
@@ -19,13 +24,15 @@ pub fn export_csv(audit_results: &[AuditMatch], path: Option<&str>) -> io::Resul
             }
             s
         };
-        csv.push_str(&format!(
-            "{},{},{},{}\n",
+        writeln!(
+            &mut csv,
+            "{},{},{},{}",
             esc(&a.rule_id),
             esc(&a.description),
             esc(&a.severity),
             esc(&match_str)
-        ));
+        )
+        .map_err(io::Error::other)?;
     }
     if let Some(path) = path {
         let mut file = File::create(path)?;

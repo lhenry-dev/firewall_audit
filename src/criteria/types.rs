@@ -26,6 +26,7 @@ pub struct AuditRule {
     Serialize,
     Deserialize,
     PartialEq,
+    Eq,
     strum_macros::EnumString,
     strum_macros::AsRefStr,
     strum_macros::EnumIter,
@@ -126,8 +127,7 @@ mod tests {
             let t = op.expected_type();
             assert!(
                 !t.is_empty(),
-                "expected_type for {:?} should not be empty",
-                op
+                "expected_type for {op:?} should not be empty"
             );
         }
     }

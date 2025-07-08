@@ -1,6 +1,6 @@
 use struct_field_names_as_array::FieldNamesAsSlice;
 
-use crate::error::{FirewallAuditError, Result};
+use crate::FirewallAuditError;
 use std::collections::HashSet;
 use std::net::IpAddr;
 
@@ -65,72 +65,48 @@ pub trait FirewallRuleProvider {
     ///
     /// # Errors
     /// Returns an error if the firewall rules cannot be listed.
-    fn list_rules() -> Result<Vec<FirewallRule>>;
+    fn list_rules() -> Result<Vec<FirewallRule>, FirewallAuditError>;
 }
 
 #[cfg(target_os = "windows")]
-pub mod platform {
-    /// Windows implementation of the firewall rule provider.
-    #[derive(Debug)]
-    pub struct WindowsFirewallProvider;
-    use super::{FirewallAuditError, FirewallRule, FirewallRuleProvider, Result};
-    impl FirewallRuleProvider for WindowsFirewallProvider {
-        fn list_rules() -> Result<Vec<FirewallRule>> {
-            windows_firewall::list_rules()
-                .map(|rules| rules.iter().map(FirewallRule::from).collect())
-                .map_err(|e| FirewallAuditError::WindowsFirewallError(e.to_string()))
-        }
-    }
-}
-
-#[cfg(target_os = "windows")]
-pub use crate::firewall_rule::platform::WindowsFirewallProvider as FirewallProvider;
+pub use crate::firewall_rule::windows::WindowsFirewallProvider as PlatformFirewallProvider;
 
 #[cfg(target_os = "linux")]
-pub use crate::firewall_rule::linux::LinuxFirewallProvider as FirewallProvider;
-
-#[cfg(target_os = "linux")]
-mod platform {
-    use super::{FirewallRule, FirewallRuleProvider, Result};
-    use crate::firewall_rule::linux::LinuxFirewallProvider;
-    pub struct PlatformLinuxFirewallProvider;
-    impl FirewallRuleProvider for PlatformLinuxFirewallProvider {
-        fn list_rules() -> Result<Vec<FirewallRule>> {
-            LinuxFirewallProvider::list_rules()
-        }
-    }
-}
+pub use crate::firewall_rule::linux::LinuxFirewallProvider as PlatformFirewallProvider;
 
 #[cfg(test)]
 mod tests {
     use crate::FirewallRule;
+    use crate::FirewallRuleProvider;
 
     #[test]
     fn test_list_rules_compiles() {
         #[cfg(target_os = "windows")]
         {
-            use crate::FirewallRuleProvider;
+            use crate::PlatformFirewallProvider;
 
-            let rules = crate::firewall_rule::platform::WindowsFirewallProvider::list_rules();
+            let rules = PlatformFirewallProvider::list_rules();
             match rules {
                 Ok(rules) => {
                     for rule in rules {
-                        println!("{:?}", rule);
+                        println!("{rule:?}");
                     }
                 }
-                Err(e) => println!("Error: {:?}", e),
+                Err(e) => println!("Error: {e:?}"),
             }
         }
         #[cfg(target_os = "linux")]
         {
-            let rules = crate::firewall_rule::platform::PlatformLinuxFirewallProvider::list_rules();
+            use crate::firewall_rule::linux::LinuxFirewallProvider;
+
+            let rules = LinuxFirewallProvider::list_rules();
             match rules {
                 Ok(rules) => {
                     for rule in rules {
-                        println!("{:?}", rule);
+                        println!("{rule:?}");
                     }
                 }
-                Err(e) => println!("Error: {:?}", e),
+                Err(e) => println!("Error: {e:?}"),
             }
         }
     }

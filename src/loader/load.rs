@@ -1,6 +1,6 @@
 use crate::criteria::types::AuditRule;
 use crate::criteria::validation::validate_criteria_expr;
-use crate::error::{FirewallAuditError, Result};
+use crate::error::FirewallAuditError;
 use std::path::Path;
 use tracing::warn;
 
@@ -11,9 +11,12 @@ fn get_extension(path: &str) -> Option<String> {
         .map(str::to_ascii_lowercase)
 }
 
-fn load_audit_criteria_from<T, F>(path: &str, parse: F) -> Result<Vec<AuditRule>>
+fn load_audit_criteria_from<T, F>(
+    path: &str,
+    parse: F,
+) -> Result<Vec<AuditRule>, FirewallAuditError>
 where
-    F: Fn(&str) -> Result<Vec<T>>,
+    F: Fn(&str) -> Result<Vec<T>, FirewallAuditError>,
     T: serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug,
 {
     let contents = std::fs::read_to_string(path).map_err(FirewallAuditError::Io)?;
@@ -38,7 +41,7 @@ where
 ///
 /// # Errors
 /// Returns an error if parsing fails.
-pub fn load_audit_criteria_yaml(path: &str) -> Result<Vec<AuditRule>> {
+pub fn load_audit_criteria_yaml(path: &str) -> Result<Vec<AuditRule>, FirewallAuditError> {
     load_audit_criteria_from(path, |c| {
         serde_yaml::from_str::<Vec<serde_yaml::Value>>(c).map_err(FirewallAuditError::YamlParse)
     })
@@ -48,7 +51,7 @@ pub fn load_audit_criteria_yaml(path: &str) -> Result<Vec<AuditRule>> {
 ///
 /// # Errors
 /// Returns an error if parsing fails.
-pub fn load_audit_criteria_json(path: &str) -> Result<Vec<AuditRule>> {
+pub fn load_audit_criteria_json(path: &str) -> Result<Vec<AuditRule>, FirewallAuditError> {
     load_audit_criteria_from(path, |c| {
         serde_json::from_str::<Vec<serde_json::Value>>(c).map_err(FirewallAuditError::JsonParse)
     })
@@ -58,7 +61,7 @@ pub fn load_audit_criteria_json(path: &str) -> Result<Vec<AuditRule>> {
 ///
 /// # Errors
 /// Returns an error if a file cannot be read or parsed.
-pub fn load_audit_criteria_multi(paths: &[String]) -> Result<Vec<AuditRule>> {
+pub fn load_audit_criteria_multi(paths: &[String]) -> Result<Vec<AuditRule>, FirewallAuditError> {
     let mut all_criteria = Vec::new();
     for path in paths {
         let criteria: Vec<AuditRule> = match get_extension(path).as_deref() {

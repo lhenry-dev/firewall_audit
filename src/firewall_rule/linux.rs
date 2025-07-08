@@ -1,11 +1,54 @@
-use crate::error::{FirewallAuditError, Result};
+use crate::error::FirewallAuditError;
 use crate::firewall_rule::FirewallRule;
 use crate::firewall_rule::FirewallRuleProvider;
 use std::collections::HashSet;
-use std::net::IpAddr;
 use std::process::Command;
 
+/// Linux implementation of the firewall rule provider.
+#[derive(Debug)]
 pub struct LinuxFirewallProvider;
+
+impl FirewallRuleProvider for LinuxFirewallProvider {
+    fn list_rules() -> Result<Vec<FirewallRule>, FirewallAuditError> {
+        let output = Command::new("sudo").arg("iptables").arg("-S").output();
+        if let Ok(out) = output {
+            if !out.status.success() {
+                return Err(FirewallAuditError::ValidationError(format!(
+                    "Failed to execute iptables -S (code: {:?}, stderr: {})",
+                    out.status.code(),
+                    String::from_utf8_lossy(&out.stderr)
+                )));
+            }
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            println!("{stdout}");
+            println!("Fin sortie brut");
+            let mut rules = Vec::new();
+            for line in stdout.lines() {
+                if line.starts_with("-N") || line.starts_with("-P") {
+                    // Ignore chain definitions and policies
+                    continue;
+                }
+                let tokens: Vec<String> = line
+                    .split_whitespace()
+                    .map(std::string::ToString::to_string)
+                    .collect();
+                if tokens.is_empty() {
+                    continue;
+                }
+                let linux_rule = LinuxFirewallRule {
+                    tokens,
+                    raw_line: line.to_string(),
+                };
+                rules.push(FirewallRule::from(&linux_rule));
+            }
+            Ok(rules)
+        } else {
+            Err(FirewallAuditError::ValidationError(
+                "Failed to run iptables -S".to_string(),
+            ))
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct LinuxFirewallRule {
@@ -25,7 +68,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
         let mut protocol = None;
         let mut action = None;
         let mut direction = "Unknown".to_string();
-        let mut service_name = None;
+        let service_name = None;
 
         let mut i = 0;
         while i < tokens.len() {
@@ -68,15 +111,7 @@ impl From<&LinuxFirewallRule> for FirewallRule {
                     }
                     i += 1;
                 }
-                "-i" => {
-                    if let Some(intf) = tokens.get(i + 1) {
-                        interfaces
-                            .get_or_insert_with(HashSet::new)
-                            .insert(intf.clone());
-                    }
-                    i += 1;
-                }
-                "-o" => {
+                "-i" | "-o" => {
                     if let Some(intf) = tokens.get(i + 1) {
                         interfaces
                             .get_or_insert_with(HashSet::new)
@@ -105,17 +140,16 @@ impl From<&LinuxFirewallRule> for FirewallRule {
         // Action friendly
         let action_friendly = match action.as_deref() {
             Some("ACCEPT") => "Allow".to_string(),
-            Some("DROP") | Some("REJECT") => "Deny".to_string(),
+            Some("DROP" | "REJECT") => "Deny".to_string(),
             Some(a) => a.to_string(),
             None => "Other".to_string(),
         };
 
-        FirewallRule {
+        Self {
             os: Some("linux".to_string()),
             name: tokens
                 .get(1)
-                .map(|s| s.as_str())
-                .unwrap_or("(unnamed)")
+                .map_or("(unnamed)", std::string::String::as_str)
                 .to_string(),
             direction,
             enabled: true,
@@ -138,53 +172,9 @@ impl From<&LinuxFirewallRule> for FirewallRule {
     }
 }
 
-impl FirewallRuleProvider for LinuxFirewallProvider {
-    /// Lists all firewall rules available from the Linux firewall.
-    ///
-    /// # Errors
-    /// Returns an error if the firewall rules cannot be listed.
-    fn list_rules() -> Result<Vec<FirewallRule>> {
-        let output = Command::new("sudo").arg("iptables").arg("-S").output();
-        if let Ok(out) = output {
-            if !out.status.success() {
-                return Err(FirewallAuditError::ValidationError(format!(
-                    "Failed to execute iptables -S (code: {:?}, stderr: {})",
-                    out.status.code(),
-                    String::from_utf8_lossy(&out.stderr)
-                )));
-            }
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            println!("{stdout}");
-            println!("Fin sortie brut");
-            let mut rules = Vec::new();
-            for line in stdout.lines() {
-                if line.starts_with("-N") || line.starts_with("-P") {
-                    // Ignore chain definitions and policies
-                    continue;
-                }
-                let tokens: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-                if tokens.is_empty() {
-                    continue;
-                }
-                let linux_rule = LinuxFirewallRule {
-                    tokens,
-                    raw_line: line.to_string(),
-                };
-                rules.push(FirewallRule::from(&linux_rule));
-            }
-            Ok(rules)
-        } else {
-            Err(FirewallAuditError::ValidationError(
-                "Failed to run iptables -S".to_string(),
-            ))
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
     use std::net::IpAddr;
 
     #[test]
@@ -203,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_from_linux_firewall_rule_full() {
-        let mut tokens = vec![
+        let tokens = vec![
             "-A".into(),
             "RULE2".into(),
             "-p".into(),
@@ -224,7 +214,7 @@ mod tests {
             "ACCEPT".into(),
         ];
         let rule = LinuxFirewallRule {
-            tokens: tokens.clone(),
+            tokens,
             raw_line: "-A RULE2 -p tcp --dport 80 --sport 12345 -s 127.0.0.1 -d 8.8.8.8 -i eth0 -o eth1 -j ACCEPT".into(),
         };
         let fw = FirewallRule::from(&rule);
@@ -296,5 +286,95 @@ mod tests {
     fn test_list_rules_error() {
         let res = LinuxFirewallProvider::list_rules();
         assert!(res.is_ok() || res.is_err());
+    }
+
+    #[test]
+    fn test_empty_tokens() {
+        let rule = LinuxFirewallRule {
+            tokens: vec![],
+            raw_line: "".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        assert_eq!(fw.name, "(unnamed)");
+        assert_eq!(fw.direction, "Unknown");
+        assert_eq!(fw.action, "Other");
+    }
+
+    #[test]
+    fn test_invalid_ports_and_addresses() {
+        let tokens = vec![
+            "-A".into(),
+            "RULE3".into(),
+            "--dport".into(),
+            "notaport".into(),
+            "--sport".into(),
+            "notaport".into(),
+            "-s".into(),
+            "notanip".into(),
+            "-d".into(),
+            "notanip".into(),
+        ];
+        let rule = LinuxFirewallRule {
+            tokens,
+            raw_line: "-A RULE3 --dport notaport --sport notaport -s notanip -d notanip".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        assert!(fw.local_ports.is_none());
+        assert!(fw.remote_ports.is_none());
+        assert!(fw.local_addresses.is_none());
+        assert!(fw.remote_addresses.is_none());
+    }
+
+    #[test]
+    fn test_interface_parsing() {
+        let tokens = vec![
+            "-A".into(),
+            "RULE4".into(),
+            "-i".into(),
+            "ethX".into(),
+            "-o".into(),
+            "ethY".into(),
+        ];
+        let rule = LinuxFirewallRule {
+            tokens,
+            raw_line: "-A RULE4 -i ethX -o ethY".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        let interfaces = fw.interfaces.unwrap();
+        assert!(interfaces.contains("ethX"));
+        assert!(interfaces.contains("ethY"));
+    }
+
+    #[test]
+    fn test_action_other() {
+        let tokens = vec!["-A".into(), "RULE5".into(), "-j".into(), "CUSTOM".into()];
+        let rule = LinuxFirewallRule {
+            tokens,
+            raw_line: "-A RULE5 -j CUSTOM".into(),
+        };
+        let fw = FirewallRule::from(&rule);
+        assert_eq!(fw.action, "CUSTOM");
+    }
+
+    #[test]
+    fn test_direction_detection_variants() {
+        let rule_none = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULE6".into()],
+            raw_line: "-A RULE6".into(),
+        };
+        let rule_in = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULE7".into()],
+            raw_line: "-A RULE7 INPUT".into(),
+        };
+        let rule_out = LinuxFirewallRule {
+            tokens: vec!["-A".into(), "RULE8".into()],
+            raw_line: "-A RULE8 OUTPUT".into(),
+        };
+        let fw_none = FirewallRule::from(&rule_none);
+        let fw_in = FirewallRule::from(&rule_in);
+        let fw_out = FirewallRule::from(&rule_out);
+        assert_eq!(fw_none.direction, "Unknown");
+        assert_eq!(fw_in.direction, "In");
+        assert_eq!(fw_out.direction, "Out");
     }
 }

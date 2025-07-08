@@ -136,8 +136,7 @@ mod tests {
             let t = op.expected_type();
             assert!(
                 !t.is_empty(),
-                "expected_type for {:?} should not be empty",
-                op
+                "expected_type for {op:?} should not be empty"
             );
         }
     }
@@ -449,7 +448,7 @@ mod extra_coverage {
         let expr = CriteriaExpr::Group {
             and: vec![
                 CriteriaExpr::Condition(cond1.clone()),
-                CriteriaExpr::Condition(cond2.clone()),
+                CriteriaExpr::Condition(cond2),
             ],
         };
         let errors = validate_criteria_expr(&expr, "root");
@@ -464,7 +463,7 @@ mod extra_coverage {
         };
         let expr = CriteriaExpr::OrGroup {
             or: vec![
-                CriteriaExpr::Condition(cond1.clone()),
+                CriteriaExpr::Condition(cond1),
                 CriteriaExpr::Condition(bad_cond.clone()),
             ],
         };
@@ -473,7 +472,7 @@ mod extra_coverage {
 
         // NotGroup with invalid
         let expr = CriteriaExpr::NotGroup {
-            not: Box::new(CriteriaExpr::Condition(bad_cond.clone())),
+            not: Box::new(CriteriaExpr::Condition(bad_cond)),
         };
         let errors = validate_criteria_expr(&expr, "root");
         assert!(errors.iter().any(|e| e.contains("Unknown field")));
@@ -550,7 +549,7 @@ mod extra_coverage {
         let cond = CriteriaCondition {
             field: field.clone(),
             operator_raw: "in_range".to_string(),
-            value: list_val.clone(),
+            value: list_val,
             operator: None,
         };
         let expr = CriteriaExpr::Condition(cond);
@@ -559,7 +558,7 @@ mod extra_coverage {
         let cond = CriteriaCondition {
             field: field.clone(),
             operator_raw: "in_range".to_string(),
-            value: bad_list_val.clone(),
+            value: bad_list_val,
             operator: None,
         };
         let expr = CriteriaExpr::Condition(cond);
@@ -606,7 +605,7 @@ mod extra_coverage {
         let cond = CriteriaCondition {
             field: field.clone(),
             operator_raw: "cidr".to_string(),
-            value: number_val.clone(),
+            value: number_val,
             operator: None,
         };
         let expr = CriteriaExpr::Condition(cond);
@@ -626,9 +625,9 @@ mod extra_coverage {
         let errors = validate_criteria_expr(&expr, path);
         assert!(errors.is_empty());
         let cond = CriteriaCondition {
-            field: field.clone(),
+            field,
             operator_raw: "is_null".to_string(),
-            value: string_val.clone(),
+            value: string_val,
             operator: None,
         };
         let expr = CriteriaExpr::Condition(cond);

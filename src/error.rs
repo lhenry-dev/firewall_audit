@@ -71,9 +71,6 @@ pub enum FirewallAuditError {
     ValidationError(String),
 }
 
-/// Result type for `firewall_audit` operations.
-pub type Result<T> = std::result::Result<T, FirewallAuditError>;
-
 impl FirewallAuditError {
     /// Create an `InvalidRuleStructure` error
     pub fn invalid_rule_structure(index: usize, message: impl Into<String>) -> Self {
