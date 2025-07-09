@@ -4,19 +4,6 @@
 #![forbid(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-//! # firewall_audit
-//!
-//! A cross-platform firewall audit tool and library.
-//!
-//! - Audit firewall rules against user-defined criteria (YAML/JSON)
-//! - Export results in CSV, HTML, or JSON
-//! - Usable as a CLI or as a library
-//!
-//! ## Example (CLI)
-//! ```sh
-//! firewall_audit --rules audit_criteria.yaml --export csv --output result.csv
-//! ```
-
 mod audit;
 mod criteria;
 mod error;

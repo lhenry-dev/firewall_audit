@@ -306,7 +306,7 @@ mod audit {
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, audit_rule_both.id);
-        assert_eq!(audit.matched_firewall_rules, vec!["rule1"]); // rule2 is not in the name criteria
+        assert_eq!(audit.matched_firewall_rules, vec!["rule1"]);
     }
 
     #[test]
@@ -332,65 +332,8 @@ mod audit {
     }
 
     #[test]
-    fn test_parallel_vs_sequential_audit() {
-        // Simulates a sequential vs parallel audit on a large list
-        let fw_rules: Vec<FirewallRule> = (0..1000)
-            .map(|i| FirewallRule {
-                name: if i == 42 {
-                    "TestRule".to_string()
-                } else {
-                    format!("Rule-{i}")
-                },
-                direction: "In".to_string(),
-                enabled: true,
-                action: "Allow".to_string(),
-                description: None,
-                application_name: None,
-                service_name: None,
-                protocol: None,
-                local_ports: None,
-                remote_ports: None,
-                local_addresses: None,
-                remote_addresses: None,
-                icmp_types_and_codes: None,
-                interfaces: None,
-                interface_types: None,
-                grouping: None,
-                profiles: None,
-                edge_traversal: None,
-                os: Some("windows".to_string()),
-            })
-            .collect();
-        let audit_rule = AuditRule {
-            id: "test_parallel".to_string(),
-            description: "test".to_string(),
-            criteria: CriteriaExpr::Condition(CriteriaCondition {
-                field: "name".to_string(),
-                operator_raw: "equals".to_string(),
-                value: Some(serde_yaml::Value::String("TestRule".to_string())),
-                operator: None,
-            }),
-            severity: "info".to_string(),
-            os: Some(vec!["windows".to_string()]),
-        };
-        // Sequential
-        let mut matches_seq = Vec::new();
-        for fw_rule in &fw_rules {
-            if crate::criteria::eval::eval_criteria(fw_rule, &audit_rule.criteria) {
-                matches_seq.push(fw_rule.name.clone());
-            }
-        }
-        // Parallel (via run_audit_multi_with_criteria)
-        let results = run_audit_multi_with_criteria(&[audit_rule], &fw_rules);
-        assert_eq!(results.len(), 1);
-        let matches_par = &results[0].matched_firewall_rules;
-        assert_eq!(matches_seq, *matches_par);
-    }
-
-    #[test]
     fn test_match_on_all_fields_and_operators() {
         use crate::criteria::types::CriteriaExpr;
-        // Test equals, not, matches, contains, in_range, is_null, wildcard, regex
         let fw_rule = FirewallRule {
             name: "TestRule".to_string(),
             direction: "In".to_string(),

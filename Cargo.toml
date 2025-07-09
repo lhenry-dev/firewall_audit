@@ -1,43 +1,44 @@
 [package]
 name = "firewall_audit"
+authors = ["lhenry-dev <lhenry.dev1@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.78"
 description = "Cross-platform firewall audit tool and library (YAML/JSON rules, CSV/HTML/JSON export)"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/<user>/<repo>"
-homepage = "https://github.com/<user>/<repo>"
-documentation = "https://docs.rs/firewall_audit"
-keywords = ["firewall", "audit", "security", "csv", "json", "html"]
+license = "MIT/Apache-2.0"
+keywords = ["firewall", "audit", "security"]
 categories = ["command-line-utilities", "network-programming", "security"]
+readme = "README.md"
+repository = "https://github.com/lhenry-dev/firewall_audit"
+documentation = "https://docs.rs/firewall_audit"
+homepage = "https://crates.io/crates/firewall_audit"
 
-[lib]
+[[bin]]
 name = "firewall_audit"
-path = "src/lib.rs"
-publish = false
+path = "src/main.rs"
 
 [dependencies]
-thiserror = "2.0"
-struct-field-names-as-array = "0.3"
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
-serde_json = "1"
-ipnet = "2"
-regex = "1"
-strum = "0.27"
-strum_macros = "0.27"
-clap = { version = "4", features = ["derive"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt"] }
-chrono = "0.4"
+thiserror = "2.0.12"
+struct-field-names-as-array = "0.3.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_yaml = "0.9.33"
+serde_json = "1.0.140"
+ipnet = "2.11.0"
+regex = "1.11.1"
+strum = "0.27.1"
+strum_macros = "0.27.1"
+clap = { version = "4.5.41", features = ["derive"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["fmt"] }
+chrono = "0.4.41"
 
 [target.'cfg(windows)'.dependencies]
-windows_firewall = "0.1"
+windows_firewall = "0.1.6"
 
 [dev-dependencies]
-assert_cmd = "2"
-predicates = "3"
-tempfile = "3"
+assert_cmd = "2.0.17"
+predicates = "3.1.3"
+tempfile = "3.20.0"
 
 [package.metadata.cargo-machete]
 ignored = ["strum"]

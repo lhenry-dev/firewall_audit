@@ -68,7 +68,9 @@ pub fn load_audit_criteria_multi(paths: &[String]) -> Result<Vec<AuditRule>, Fir
             Some("yaml" | "yml") => load_audit_criteria_yaml(path)?,
             Some("json") => load_audit_criteria_json(path)?,
             _ => {
-                return Err(FirewallAuditError::UnsupportedFileFormat { path: path.clone() });
+                return Err(FirewallAuditError::UnsupportedFileFormat {
+                    path: path.to_string(),
+                });
             }
         };
         let mut valid_criteria = Vec::new();

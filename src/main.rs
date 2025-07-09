@@ -52,8 +52,8 @@ fn main() {
         .init();
     let cli = Cli::parse();
 
-    let audit_criteria = firewall_audit::load_audit_criteria_multi(&[cli.criteria.clone()])
-        .unwrap_or_else(|e| {
+    let audit_criteria =
+        firewall_audit::load_audit_criteria_multi(&[cli.criteria]).unwrap_or_else(|e| {
             error!("Error loading audit criteria: {}", e);
             process::exit(1);
         });

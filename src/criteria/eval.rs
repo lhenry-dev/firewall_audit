@@ -9,7 +9,7 @@ use std::process::Command;
 
 fn get_field_value(rule: &FirewallRule, field: &str) -> Option<Value> {
     match field {
-        "os" => Some(Value::String(rule.os.clone()?)),
+        "os" => rule.os.clone().map(Value::String),
         "name" => Some(Value::String(rule.name.clone())),
         "direction" => Some(Value::String(rule.direction.clone())),
         "enabled" => Some(Value::Bool(rule.enabled)),
