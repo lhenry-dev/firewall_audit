@@ -1,24 +1,23 @@
-use crate::audit::run::AuditMatch;
+use crate::{audit::run::AuditMatch, FirewallAuditError};
 use std::fmt::Write as _;
 
 /// Formats audit results as a human-readable text string for CLI output.
-pub fn export_text(audit_results: &[AuditMatch]) -> String {
+pub fn export_text(audit_results: &[AuditMatch]) -> Result<String, FirewallAuditError> {
     let mut output = String::new();
     for audit in audit_results {
-        writeln!(&mut output, "\nAudit Rule: {}", audit.rule_id).unwrap();
-        writeln!(&mut output, "Description: {}", audit.description).unwrap();
-        writeln!(&mut output, "Severity: {}", audit.severity).unwrap();
+        writeln!(&mut output, "\nAudit Rule: {}", audit.rule_id)?;
+        writeln!(&mut output, "Description: {}", audit.description)?;
+        writeln!(&mut output, "Severity: {}", audit.severity)?;
         writeln!(
             &mut output,
             "\t{} match(es) found:",
             audit.matched_firewall_rules.len()
-        )
-        .unwrap();
+        )?;
         for name in &audit.matched_firewall_rules {
-            writeln!(&mut output, "\t- {name}").unwrap();
+            writeln!(&mut output, "\t- {name}")?;
         }
     }
-    output
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -27,7 +26,7 @@ mod tests {
 
     #[test]
     fn test_export_text_empty() {
-        let result = export_text(&[]);
+        let result = export_text(&[]).unwrap();
         assert!(result.trim().is_empty(), "Should be empty for no results");
     }
 
@@ -39,7 +38,7 @@ mod tests {
             severity: "high".into(),
             matched_firewall_rules: vec!["RuleA".into()],
         };
-        let result = export_text(&[audit]);
+        let result = export_text(&[audit]).unwrap();
         assert!(result.contains("Audit Rule: R1"));
         assert!(result.contains("desc1"));
         assert!(result.contains("high"));
@@ -55,7 +54,7 @@ mod tests {
             severity: "low".into(),
             matched_firewall_rules: vec!["RuleB".into(), "RuleC".into()],
         };
-        let result = export_text(&[audit]);
+        let result = export_text(&[audit]).unwrap();
         assert!(result.contains("2 match(es)"));
         assert!(result.contains("- RuleB"));
         assert!(result.contains("- RuleC"));
@@ -69,7 +68,7 @@ mod tests {
             severity: "medium".into(),
             matched_firewall_rules: vec!["Règle spéciale !@#".into()],
         };
-        let result = export_text(&[audit]);
+        let result = export_text(&[audit]).unwrap();
         assert!(result.contains("Règle spéciale !@#"));
     }
 }

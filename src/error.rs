@@ -4,15 +4,15 @@ pub enum FirewallAuditError {
     /// I/O error
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-
+    /// Formatting error
+    #[error("Formatting error: {0}")]
+    Fmt(#[from] std::fmt::Error),
     /// YAML parsing error
     #[error("YAML parse error: {0}")]
     YamlParse(#[from] serde_yaml::Error),
-
     /// JSON parsing error
     #[error("JSON parse error: {0}")]
     JsonParse(#[from] serde_json::Error),
-
     /// Invalid rule structure
     #[error("Invalid rule structure at index {index}: {message}")]
     InvalidRuleStructure {
@@ -21,7 +21,6 @@ pub enum FirewallAuditError {
         /// Error message
         message: String,
     },
-
     /// Unknown operator
     #[error("Unknown operator '{operator}' at {path}")]
     UnknownOperator {
@@ -30,7 +29,6 @@ pub enum FirewallAuditError {
         /// Path in the rule
         path: String,
     },
-
     /// Unknown field
     #[error("Unknown field '{field}' at {path}")]
     UnknownField {
@@ -39,7 +37,6 @@ pub enum FirewallAuditError {
         /// Path in the rule
         path: String,
     },
-
     /// Invalid operator value
     #[error("Invalid value for operator '{operator}' at {path}: {message}")]
     InvalidOperatorValue {
@@ -50,22 +47,18 @@ pub enum FirewallAuditError {
         /// Error message
         message: String,
     },
-
     /// Unsupported file format
     #[error("Unsupported file format: {path}")]
     UnsupportedFileFormat {
         /// File path
         path: String,
     },
-
     /// Windows Firewall error
     #[error("Windows Firewall error: {0}")]
     WindowsFirewallError(String),
-
     /// Export error
     #[error("Export error: {0}")]
     ExportError(String),
-
     /// Validation error
     #[error("Validation error: {0}")]
     ValidationError(String),

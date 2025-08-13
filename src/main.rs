@@ -1,6 +1,7 @@
 //! Firewall Audit CLI
 //!
-//! This binary audits firewall rules against user-defined criteria and exports the results in various formats (CSV, HTML, JSON).
+//! This binary audits firewall rules against user-defined criteria and exports
+//! the results in various formats (CSV, HTML, JSON).
 //!
 //! # Example
 //! ```sh
@@ -9,7 +10,9 @@
 
 use clap::{Parser, ValueEnum};
 use firewall_audit::{
-    export_csv, export_html, export_json, FirewallRuleProvider, PlatformFirewallProvider,
+    audit_summary_phrase, export_csv, export_html, export_json, export_text,
+    load_audit_criteria_multi, run_audit_multi_with_criteria, FirewallAuditError,
+    FirewallRuleProvider, PlatformFirewallProvider,
 };
 use std::process;
 use tracing::{error, info};
@@ -28,7 +31,8 @@ enum ExportFormat {
     author,
     version,
     about = "Cross-platform firewall audit tool (CSV/HTML/JSON export)",
-    long_about = "This program audits local firewall rules against user-defined criteria from a YAML or JSON file. Results can be exported in various formats."
+    long_about = "This program audits local firewall rules against user-defined criteria \
+                  from a YAML or JSON file. Results can be exported in various formats."
 )]
 struct Cli {
     /// Path to the audit criteria file (YAML or JSON)
@@ -44,80 +48,64 @@ struct Cli {
     output: Option<String>,
 }
 
-/// Entry point for the `firewall_audit` CLI.
 fn main() {
+    if let Err(e) = run() {
+        error!("{e}");
+        process::exit(1);
+    }
+}
+
+fn run() -> Result<(), FirewallAuditError> {
     tracing_subscriber::fmt()
         .without_time()
         .with_target(false)
         .init();
+
     let cli = Cli::parse();
 
-    let audit_criteria =
-        firewall_audit::load_audit_criteria_multi(&[cli.criteria]).unwrap_or_else(|e| {
-            error!("Error loading audit criteria: {}", e);
-            process::exit(1);
-        });
-    info!("Loaded {} audit criteria(s).", audit_criteria.len());
+    let audit_criteria = load_audit_criteria_multi(&[cli.criteria])?;
     if audit_criteria.is_empty() {
-        error!("No valid audit criteria loaded. Exiting.");
-        process::exit(1);
+        return Err(FirewallAuditError::ValidationError(
+            "No valid audit criteria loaded.".into(),
+        ));
     }
+    info!("Loaded {} audit criteria(s).", audit_criteria.len());
 
-    // Load firewall rules
-    let firewall_rules = PlatformFirewallProvider::list_rules().unwrap_or_else(|e| {
-        error!("Error loading firewall rules: {}", e);
-        process::exit(1);
-    });
+    let firewall_rules = PlatformFirewallProvider::list_rules()?;
     info!("Loaded {} firewall rule(s).", firewall_rules.len());
 
-    // Run the audit and get structured results
-    let audit_results =
-        firewall_audit::run_audit_multi_with_criteria(&audit_criteria, &firewall_rules);
+    let audit_results = run_audit_multi_with_criteria(&audit_criteria, &firewall_rules);
 
-    let output_path = match (&cli.output, &cli.export) {
-        (None, Some(fmt)) => Some({
-            let ext = match fmt {
-                ExportFormat::Csv => "csv",
-                ExportFormat::Html => "html",
-                ExportFormat::Json => "json",
-            };
-
+    let output_path = cli.output.or_else(|| {
+        cli.export.as_ref().map(|fmt| {
             format!(
                 "firewall_audit_{}.{}",
                 chrono::Utc::now().format("%Y%m%d_%H%M%S"),
-                ext
+                match fmt {
+                    ExportFormat::Csv => "csv",
+                    ExportFormat::Html => "html",
+                    ExportFormat::Json => "json",
+                }
             )
-        }),
-        _ => cli.output,
-    };
+        })
+    });
 
     match (&output_path, &cli.export) {
-        (Some(output_path), Some(fmt)) => {
-            let result = match fmt {
-                ExportFormat::Csv => {
-                    export_csv(&audit_results, Some(output_path)).map_err(|e| e.to_string())
-                }
-                ExportFormat::Html => {
-                    export_html(&audit_results, Some(output_path)).map_err(|e| e.to_string())
-                }
-                ExportFormat::Json => {
-                    export_json(&audit_results, Some(output_path)).map_err(|e| e.to_string())
-                }
+        (Some(path), Some(fmt)) => {
+            match fmt {
+                ExportFormat::Csv => export_csv(&audit_results, Some(path))?,
+                ExportFormat::Html => export_html(&audit_results, Some(path))?,
+                ExportFormat::Json => export_json(&audit_results, Some(path))?,
             };
-            match result {
-                Ok(_) => info!("Export successful to {}", output_path),
-                Err(e) => {
-                    error!("Export error: {}", e);
-                    process::exit(1);
-                }
-            }
+            info!("Export successful to {}", path);
         }
         _ => {
-            println!("{}", firewall_audit::export_text(&audit_results));
+            println!("{}", export_text(&audit_results)?);
         }
     }
 
-    let summary = firewall_audit::audit_summary_phrase(&audit_results);
     println!();
-    info!("{summary}");
+    info!("{}", audit_summary_phrase(&audit_results));
+
+    Ok(())
 }
