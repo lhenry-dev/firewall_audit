@@ -29,7 +29,7 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 clap = { version = "4.5.41", features = ["derive"] }
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["fmt"] }
+tracing-subscriber = { version = "0.3.20", features = ["fmt"] }
 chrono = "0.4.41"
 
 [target.'cfg(windows)'.dependencies]
