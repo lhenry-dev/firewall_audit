@@ -41,7 +41,7 @@ jobs:
         with:
           toolchain: ${{matrix.toolchain}}
       - name: Run tests
-        run : cargo test --all-features -- --nocapture
+        run: cargo test --all-features -- --nocapture
 
   fmt:
     runs-on: ${{ matrix.os }}
@@ -51,6 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
       - run: cargo fmt --all -- --check
 
   clippy:
@@ -61,6 +63,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - run: cargo clippy --all-features -- -D warnings -D clippy::expect_used -D clippy::panic -D clippy::unwrap_used
 
   doc:
