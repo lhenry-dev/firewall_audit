@@ -41,7 +41,8 @@ pub enum FirewallAuditError {
                   from a YAML or JSON file. Results can be exported in various formats."
 )]
 pub struct Args {
-    /// Path to the audit criteria file (YAML or JSON)
+    /// Path to the audit criteria file (YAML or JSON).
+    /// Optional; if not provided, a default criteria file will be used.
     #[arg(long, short = 'c')]
     pub criteria: Option<String>,
 
@@ -49,7 +50,7 @@ pub struct Args {
     #[arg(long, short = 'e', default_value = "stdout")]
     pub export: ExportFormat,
 
-    /// Output file
+    /// Specify output filename
     #[arg(long, short = 'o')]
     pub output: Option<String>,
 

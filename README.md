@@ -35,12 +35,17 @@ cargo install firewall_audit
 Audit your firewall rules using a YAML or JSON criteria file and export the results:
 
 ```sh
+firewall_audit --export html
+
 firewall_audit --criteria audit_criteria.yaml --export html --output result.html
+
+firewall_audit -c audit_criteria.yaml -e html -o result.html
 ```
 
-- `--criteria`: Path to your audit criteria file (YAML or JSON)
-- `--export`: Output format (`csv`, `html`, or `json`). If omitted, results are printed as plain text.
-- `--output`: Output file path (optional; auto-generated if omitted)
+- `--criteria` / `-c`: Path to your audit criteria file (YAML or JSON). Optional; if not provided, a default criteria file will be used.
+- `--export` / `-e`: Output format (`csv`, `html`, `json`, or `stdout` default: `stdout`)
+- `--output` / `-o`: Output file path (optional; auto-generated if omitted)
+- `--quiet` / `-q`: Do not print anything to stdout
 
 ## HTML Export Screenshot
 
@@ -114,6 +119,7 @@ For more examples, see `docs/EXAMPLES.md`. For a complete reference of all suppo
 ## Support
 
 For issues and questions:
+
 - Open an issue on GitHub
 - Check the [documentation](https://docs.rs/firewall_audit)
 
@@ -123,9 +129,9 @@ For issues and questions:
 
 This project is licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   <https://www.apache.org/licenses/LICENSE-2.0>)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   <https://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+  <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  <https://opensource.org/licenses/MIT>)
 
 at your option.
