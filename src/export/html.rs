@@ -2,8 +2,8 @@ use std::fmt::Write as _;
 use std::fs::File;
 use std::io::{self, Write};
 
-use crate::audit::run::AuditMatch;
-use crate::FirewallAuditError;
+use crate::audit::AuditMatch;
+use crate::export::ExportError;
 
 /// Exports the audit results to HTML format, writing to a file if a path is provided.
 ///
@@ -12,7 +12,7 @@ use crate::FirewallAuditError;
 pub fn export_html(
     audit_results: &[AuditMatch],
     path: Option<&str>,
-) -> Result<String, FirewallAuditError> {
+) -> Result<String, ExportError> {
     let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
         match a.severity.to_lowercase().as_str() {
             "high" => acc.0 += 1,
@@ -87,7 +87,7 @@ pub fn export_html(
 
 #[cfg(test)]
 mod tests {
-    use crate::{audit::run::AuditMatch, export_html};
+    use crate::{audit::AuditMatch, export::export_html};
 
     #[test]
     fn test_export_html_format() {

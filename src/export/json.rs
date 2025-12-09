@@ -1,5 +1,5 @@
-use crate::audit::run::AuditMatch;
-use crate::error::FirewallAuditError;
+use crate::audit::AuditMatch;
+use crate::export::ExportError;
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
@@ -34,7 +34,7 @@ struct JsonAuditResult {
 pub fn export_json(
     audit_results: &[AuditMatch],
     path: Option<&str>,
-) -> Result<String, FirewallAuditError> {
+) -> Result<String, ExportError> {
     let (high, medium, low, info) = audit_results.iter().fold((0, 0, 0, 0), |mut acc, a| {
         match a.severity.to_lowercase().as_str() {
             "high" => acc.0 += 1,
@@ -66,19 +66,17 @@ pub fn export_json(
         summary,
         results: json_blocks,
     };
-    let json = serde_json::to_string_pretty(&result)
-        .map_err(|e| FirewallAuditError::ExportError(e.to_string()))?;
+    let json = serde_json::to_string_pretty(&result)?;
     if let Some(path) = path {
-        let mut file = File::create(path).map_err(FirewallAuditError::Io)?;
-        file.write_all(json.as_bytes())
-            .map_err(FirewallAuditError::Io)?;
+        let mut file = File::create(path).map_err(ExportError::Io)?;
+        file.write_all(json.as_bytes()).map_err(ExportError::Io)?;
     }
     Ok(json)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{audit::run::AuditMatch, export_json};
+    use crate::{audit::AuditMatch, export::export_json};
 
     #[test]
     fn test_export_json_format() {

@@ -1,8 +1,8 @@
-use crate::{audit::run::AuditMatch, FirewallAuditError};
+use crate::{audit::AuditMatch, export::ExportError};
 use std::fmt::Write as _;
 
 /// Formats audit results as a human-readable text string for CLI output.
-pub fn export_text(audit_results: &[AuditMatch]) -> Result<String, FirewallAuditError> {
+pub fn export_text(audit_results: &[AuditMatch]) -> Result<String, ExportError> {
     let mut output = String::new();
     for audit in audit_results {
         writeln!(&mut output, "\nAudit Rule: {}", audit.rule_id)?;
@@ -22,7 +22,7 @@ pub fn export_text(audit_results: &[AuditMatch]) -> Result<String, FirewallAudit
 
 #[cfg(test)]
 mod tests {
-    use crate::{audit::run::AuditMatch, export_text};
+    use crate::{audit::AuditMatch, export::export_text};
 
     #[test]
     fn test_export_text_empty() {

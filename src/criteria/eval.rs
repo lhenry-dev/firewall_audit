@@ -354,11 +354,14 @@ pub fn eval_criteria(rule: &FirewallRule, expr: &CriteriaExpr) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::{
-        criteria::eval::{
-            eval_cmp, eval_contains, eval_ends_with, eval_equals, eval_in_range, eval_is_null,
-            eval_matches, eval_regex, eval_starts_with, eval_wildcard, get_field_value,
+        criteria::{
+            eval::{
+                eval_cmp, eval_contains, eval_ends_with, eval_equals, eval_in_range, eval_is_null,
+                eval_matches, eval_regex, eval_starts_with, eval_wildcard, get_field_value,
+            },
+            types::CriteriaOperator,
         },
-        CriteriaOperator, FirewallRule,
+        firewall_rule::FirewallRule,
     };
     use serde_yaml::Value;
     #[test]
