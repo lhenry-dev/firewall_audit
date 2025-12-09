@@ -1,5 +1,5 @@
-use crate::error::FirewallAuditError;
 use crate::firewall_rule::FirewallRule;
+use crate::firewall_rule::FirewallRuleError;
 use crate::firewall_rule::FirewallRuleProvider;
 use windows_firewall::WindowsFirewallRule;
 
@@ -8,10 +8,10 @@ use windows_firewall::WindowsFirewallRule;
 pub struct WindowsFirewallProvider;
 
 impl FirewallRuleProvider for WindowsFirewallProvider {
-    fn list_rules() -> Result<Vec<FirewallRule>, FirewallAuditError> {
+    fn list_rules() -> Result<Vec<FirewallRule>, FirewallRuleError> {
         windows_firewall::list_rules()
             .map(|rules| rules.iter().map(FirewallRule::from).collect())
-            .map_err(|e| FirewallAuditError::WindowsFirewallError(e.to_string()))
+            .map_err(|e| FirewallRuleError::WindowsFirewallError(e.to_string()))
     }
 }
 

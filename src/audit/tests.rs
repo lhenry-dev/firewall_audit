@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod audit {
-    use super::super::run::run_audit_multi_with_criteria;
-    use crate::criteria::{AuditRule, CriteriaCondition, CriteriaExpr};
-    use crate::firewall_rule::FirewallRule;
+    use crate::{
+        audit::run_audit,
+        criteria::types::{AuditRule, CriteriaCondition, CriteriaExpr},
+        firewall_rule::FirewallRule,
+    };
 
     #[test]
     fn test_audit_match_on_name() {
@@ -62,7 +64,7 @@ mod audit {
             severity: "high".to_string(),
             os: Some(vec!["linux".to_string()]),
         }];
-        let results = run_audit_multi_with_criteria(&audit_rules, &fw_rules);
+        let results = run_audit(&audit_rules, &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, "ssh_rule");
@@ -104,7 +106,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         }];
-        let results = run_audit_multi_with_criteria(&audit_rules, &fw_rules);
+        let results = run_audit(&audit_rules, &fw_rules);
         assert!(results.is_empty());
     }
 
@@ -166,7 +168,7 @@ mod audit {
             severity: "medium".to_string(),
             os: Some(vec!["linux".to_string()]),
         }];
-        let results = run_audit_multi_with_criteria(&audit_rules, &fw_rules);
+        let results = run_audit(&audit_rules, &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, "ssh_rule");
@@ -258,8 +260,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         };
-        let results =
-            run_audit_multi_with_criteria(std::slice::from_ref(&audit_rule_linux), &fw_rules);
+        let results = run_audit(std::slice::from_ref(&audit_rule_linux), &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, audit_rule_linux.id);
@@ -281,8 +282,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["windows".to_string()]),
         };
-        let results =
-            run_audit_multi_with_criteria(std::slice::from_ref(&audit_rule_windows), &fw_rules);
+        let results = run_audit(std::slice::from_ref(&audit_rule_windows), &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, audit_rule_windows.id);
@@ -304,8 +304,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string(), "windows".to_string()]),
         };
-        let results =
-            run_audit_multi_with_criteria(std::slice::from_ref(&audit_rule_both), &fw_rules);
+        let results = run_audit(std::slice::from_ref(&audit_rule_both), &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, audit_rule_both.id);
@@ -327,8 +326,7 @@ mod audit {
             severity: "info".to_string(),
             os: None,
         };
-        let results =
-            run_audit_multi_with_criteria(std::slice::from_ref(&audit_rule_all), &fw_rules);
+        let results = run_audit(std::slice::from_ref(&audit_rule_all), &fw_rules);
         assert_eq!(results.len(), 1);
         let audit = &results[0];
         assert_eq!(audit.rule_id, audit_rule_all.id);
@@ -451,8 +449,7 @@ mod audit {
                 severity: "info".to_string(),
                 os: Some(vec!["linux".to_string()]),
             };
-            let results =
-                run_audit_multi_with_criteria(&[audit_rule], std::slice::from_ref(&fw_rule));
+            let results = run_audit(&[audit_rule], std::slice::from_ref(&fw_rule));
             if should_match {
                 assert_eq!(results.len(), 1, "Should match for {field} {op}");
             } else {
@@ -496,7 +493,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         };
-        let results = run_audit_multi_with_criteria(
+        let results = run_audit(
             std::slice::from_ref(&audit_rule),
             std::slice::from_ref(&fw_rule),
         );
@@ -505,7 +502,7 @@ mod audit {
             os: None,
             ..audit_rule
         };
-        let results = run_audit_multi_with_criteria(&[audit_rule_none], &[fw_rule]);
+        let results = run_audit(&[audit_rule_none], &[fw_rule]);
         assert_eq!(results.len(), 1);
     }
 
@@ -558,7 +555,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         };
-        let results = run_audit_multi_with_criteria(&[audit_rule], &[fw_rule]);
+        let results = run_audit(&[audit_rule], &[fw_rule]);
         assert_eq!(results.len(), 1);
     }
 
@@ -598,7 +595,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         };
-        let results = run_audit_multi_with_criteria(&[audit_rule], &[fw_rule]);
+        let results = run_audit(&[audit_rule], &[fw_rule]);
         assert_eq!(results.len(), 1);
     }
 
@@ -649,7 +646,7 @@ mod audit {
             severity: "info".to_string(),
             os: Some(vec!["linux".to_string()]),
         };
-        let results = run_audit_multi_with_criteria(&[audit_rule1, audit_rule2], &[fw_rule]);
+        let results = run_audit(&[audit_rule1, audit_rule2], &[fw_rule]);
         assert_eq!(results.len(), 2);
     }
 }

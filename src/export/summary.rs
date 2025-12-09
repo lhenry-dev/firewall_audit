@@ -1,4 +1,4 @@
-use crate::audit::run::AuditMatch;
+use crate::audit::AuditMatch;
 
 /// Returns a summary phrase for the audit output for console display.
 pub fn audit_summary_phrase(audit_results: &[AuditMatch]) -> String {
@@ -24,7 +24,7 @@ pub fn audit_summary_phrase(audit_results: &[AuditMatch]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::{audit::run::AuditMatch, audit_summary_phrase};
+    use crate::{audit::AuditMatch, export::audit_summary_phrase};
 
     #[test]
     fn test_audit_summary_phrase() {

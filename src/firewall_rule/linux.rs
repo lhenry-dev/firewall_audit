@@ -1,5 +1,5 @@
-use crate::error::FirewallAuditError;
 use crate::firewall_rule::FirewallRule;
+use crate::firewall_rule::FirewallRuleError;
 use crate::firewall_rule::FirewallRuleProvider;
 use std::collections::HashSet;
 use std::process::Command;
@@ -9,11 +9,11 @@ use std::process::Command;
 pub struct LinuxFirewallProvider;
 
 impl FirewallRuleProvider for LinuxFirewallProvider {
-    fn list_rules() -> Result<Vec<FirewallRule>, FirewallAuditError> {
+    fn list_rules() -> Result<Vec<FirewallRule>, FirewallRuleError> {
         let output = Command::new("sudo").arg("iptables").arg("-S").output();
         if let Ok(out) = output {
             if !out.status.success() {
-                return Err(FirewallAuditError::ValidationError(format!(
+                return Err(FirewallRuleError::LinuxFirewallError(format!(
                     "Failed to execute iptables -S (code: {:?}, stderr: {})",
                     out.status.code(),
                     String::from_utf8_lossy(&out.stderr)
@@ -43,7 +43,7 @@ impl FirewallRuleProvider for LinuxFirewallProvider {
             }
             Ok(rules)
         } else {
-            Err(FirewallAuditError::ValidationError(
+            Err(FirewallRuleError::LinuxFirewallError(
                 "Failed to run iptables -S".to_string(),
             ))
         }

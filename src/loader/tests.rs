@@ -3,9 +3,8 @@ mod loader {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
-    use crate::{
-        load_audit_criteria_multi,
-        loader::load::{load_audit_criteria_json, load_audit_criteria_yaml},
+    use crate::loader::load::{
+        load_audit_criteria_from_paths, load_audit_criteria_json, load_audit_criteria_yaml,
     };
 
     #[test]
@@ -44,8 +43,8 @@ mod loader {
         write!(tmpjson, "{json}").unwrap();
         let path_yaml = tmpyaml.path().to_str().unwrap().to_string();
         let path_json = tmpjson.path().to_str().unwrap().to_string();
-        let rules =
-            load_audit_criteria_multi(&[path_yaml, path_json]).expect("Failed to load multi rules");
+        let rules = load_audit_criteria_from_paths(&[path_yaml, path_json])
+            .expect("Failed to load multi rules");
         assert_eq!(rules.len(), 2);
         assert!(rules.iter().any(|r| r.id == "test1"));
         assert!(rules.iter().any(|r| r.id == "test2"));
@@ -109,7 +108,8 @@ mod loader {
         let mut tmpfile = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap().to_string();
-        let rules = load_audit_criteria_multi(&[path]).expect("Should not crash on unknown field");
+        let rules =
+            load_audit_criteria_from_paths(&[path]).expect("Should not crash on unknown field");
         assert!(rules.is_empty());
     }
 
@@ -119,7 +119,8 @@ mod loader {
         let mut tmpfile = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap().to_string();
-        let rules = load_audit_criteria_multi(&[path]).expect("Should not crash on wrong type");
+        let rules =
+            load_audit_criteria_from_paths(&[path]).expect("Should not crash on wrong type");
         assert!(rules.is_empty());
     }
 
@@ -129,7 +130,7 @@ mod loader {
         let mut tmpfile = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap().to_string();
-        let res = load_audit_criteria_multi(&[path]);
+        let res = load_audit_criteria_from_paths(&[path]);
         assert!(res.is_ok());
         let rules = res.unwrap();
         assert!(rules.is_empty());
@@ -141,8 +142,8 @@ mod loader {
         let mut tmpfile = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         write!(tmpfile, "{yaml}").unwrap();
         let path = tmpfile.path().to_str().unwrap().to_string();
-        let rules =
-            load_audit_criteria_multi(&[path]).expect("Should not crash on mixed valid/invalid");
+        let rules = load_audit_criteria_from_paths(&[path])
+            .expect("Should not crash on mixed valid/invalid");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].id, "valid");
     }
