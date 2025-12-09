@@ -59,7 +59,20 @@ pub struct Args {
     pub quiet: bool,
 }
 
-/// Todo
+/// Runs a full firewall audit based on the provided CLI arguments.
+///
+/// Steps performed:
+/// 1. Load audit criteria from a YAML or JSON file (or use default if none specified).
+///    Returns a `ValidationError` if no valid criteria are found.
+/// 2. Retrieve the list of current firewall rules from the platform-specific provider.
+/// 3. Run the audit by comparing the loaded criteria against the current firewall rules.
+/// 4. Export the audit results in the requested format (CSV, HTML, JSON, or stdout).
+///
+/// # Errors
+/// Returns `FirewallAuditError` variants if:
+/// * There is an I/O issue while loading criteria or exporting results.
+/// * The audit criteria fail validation.
+/// * The loader, firewall rule provider, or exporter encounters an error.
 pub fn run_firewall_audit(args: Args) -> Result<(), FirewallAuditError> {
     let audit_criteria = load_audit_criteria(args.criteria)?;
 
