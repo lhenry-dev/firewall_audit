@@ -240,7 +240,7 @@ fn eval_is_null(field_val: Option<&Value>) -> bool {
 }
 
 fn eval_application_exists(field_val: Option<&Value>) -> bool {
-    if let Some(Value::String(ref path)) = field_val {
+    if let Some(Value::String(path)) = field_val {
         Path::new(path).exists()
     } else {
         false
@@ -248,7 +248,7 @@ fn eval_application_exists(field_val: Option<&Value>) -> bool {
 }
 
 fn eval_service_exists(field_val: Option<&Value>) -> bool {
-    if let Some(Value::String(ref service)) = field_val {
+    if let Some(Value::String(service)) = field_val {
         #[cfg(target_os = "windows")]
         {
             let output = Command::new("sc").arg("query").arg(service).output();

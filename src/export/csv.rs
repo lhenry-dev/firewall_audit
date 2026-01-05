@@ -65,7 +65,7 @@ mod tests {
         assert!(lines[1].contains(",Critical,high,"));
         assert!(lines[2].contains(",Info,info,"));
         assert_eq!(lines.len(), 3); // header + 2
-                                    // Check CSV escaping if needed
+        // Check CSV escaping if needed
         let audit_results2 = vec![AuditMatch {
             rule_id: "test".to_string(),
             description: "a,b".to_string(),

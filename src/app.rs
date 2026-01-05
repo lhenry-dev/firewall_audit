@@ -6,7 +6,7 @@ use crate::firewall_rule::FirewallRuleError;
 use crate::loader::LoaderError;
 use crate::{
     audit::run_audit,
-    export::{export_results, ExportFormat},
+    export::{ExportFormat, export_results},
     firewall_rule::{FirewallRuleProvider, PlatformFirewallProvider},
     loader::load_audit_criteria,
 };

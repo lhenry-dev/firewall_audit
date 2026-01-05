@@ -11,4 +11,4 @@ mod export;
 mod firewall_rule;
 mod loader;
 
-pub use app::{run_firewall_audit, Args};
+pub use app::{Args, run_firewall_audit};

@@ -80,34 +80,34 @@ impl From<&LinuxFirewallRule> for FirewallRule {
                     i += 1;
                 }
                 "--dport" => {
-                    if let Some(port) = tokens.get(i + 1) {
-                        if let Ok(port) = port.parse() {
-                            local_ports.get_or_insert_with(HashSet::new).insert(port);
-                        }
+                    if let Some(port) = tokens.get(i + 1)
+                        && let Ok(port) = port.parse()
+                    {
+                        local_ports.get_or_insert_with(HashSet::new).insert(port);
                     }
                     i += 1;
                 }
                 "--sport" => {
-                    if let Some(port) = tokens.get(i + 1) {
-                        if let Ok(port) = port.parse() {
-                            remote_ports.get_or_insert_with(HashSet::new).insert(port);
-                        }
+                    if let Some(port) = tokens.get(i + 1)
+                        && let Ok(port) = port.parse()
+                    {
+                        remote_ports.get_or_insert_with(HashSet::new).insert(port);
                     }
                     i += 1;
                 }
                 "-s" => {
-                    if let Some(addr) = tokens.get(i + 1) {
-                        if let Ok(ip) = addr.parse() {
-                            local_addresses.get_or_insert_with(HashSet::new).insert(ip);
-                        }
+                    if let Some(addr) = tokens.get(i + 1)
+                        && let Ok(ip) = addr.parse()
+                    {
+                        local_addresses.get_or_insert_with(HashSet::new).insert(ip);
                     }
                     i += 1;
                 }
                 "-d" => {
-                    if let Some(addr) = tokens.get(i + 1) {
-                        if let Ok(ip) = addr.parse() {
-                            remote_addresses.get_or_insert_with(HashSet::new).insert(ip);
-                        }
+                    if let Some(addr) = tokens.get(i + 1)
+                        && let Ok(ip) = addr.parse()
+                    {
+                        remote_addresses.get_or_insert_with(HashSet::new).insert(ip);
                     }
                     i += 1;
                 }
@@ -224,16 +224,18 @@ mod tests {
         assert_eq!(fw.protocol.as_deref(), Some("tcp"));
         assert!(fw.local_ports.as_ref().unwrap().contains(&80));
         assert!(fw.remote_ports.as_ref().unwrap().contains(&12345));
-        assert!(fw
-            .local_addresses
-            .as_ref()
-            .unwrap()
-            .contains(&"127.0.0.1".parse::<IpAddr>().unwrap()));
-        assert!(fw
-            .remote_addresses
-            .as_ref()
-            .unwrap()
-            .contains(&"8.8.8.8".parse::<IpAddr>().unwrap()));
+        assert!(
+            fw.local_addresses
+                .as_ref()
+                .unwrap()
+                .contains(&"127.0.0.1".parse::<IpAddr>().unwrap())
+        );
+        assert!(
+            fw.remote_addresses
+                .as_ref()
+                .unwrap()
+                .contains(&"8.8.8.8".parse::<IpAddr>().unwrap())
+        );
         assert!(fw.interfaces.as_ref().unwrap().contains("eth0"));
         assert!(fw.interfaces.as_ref().unwrap().contains("eth1"));
     }

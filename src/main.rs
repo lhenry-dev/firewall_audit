@@ -1,5 +1,5 @@
 use clap::Parser;
-use firewall_audit::{run_firewall_audit, Args};
+use firewall_audit::{Args, run_firewall_audit};
 use tracing::warn;
 
 fn main() {

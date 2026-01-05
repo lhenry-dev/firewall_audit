@@ -124,9 +124,11 @@ mod tests {
         };
         let expr = CriteriaExpr::Condition(cond);
         let errors = validate_criteria_expr(&expr, "root");
-        assert!(errors
-            .iter()
-            .any(|e| e.contains("must be a list of 2 numbers")));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a list of 2 numbers"))
+        );
     }
 
     #[test]
@@ -523,9 +525,11 @@ mod extra_coverage {
         };
         let expr = CriteriaExpr::Condition(cond);
         let errors = validate_criteria_expr(&expr, path);
-        assert!(errors
-            .iter()
-            .any(|e| e.contains("must be a list of 2 numbers")));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a list of 2 numbers"))
+        );
 
         // Lt, Lte, Gt, Gte require number
         for op in ["lt", "lte", "gt", "gte"] {
@@ -570,9 +574,11 @@ mod extra_coverage {
         };
         let expr = CriteriaExpr::Condition(cond);
         let errors = validate_criteria_expr(&expr, path);
-        assert!(errors
-            .iter()
-            .any(|e| e.contains("must be a string (IP or CIDR)")));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a string (IP or CIDR)"))
+        );
 
         // IsNull requires no value
         let cond = CriteriaCondition {

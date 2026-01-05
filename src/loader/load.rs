@@ -1,5 +1,5 @@
 use crate::criteria::types::AuditRule;
-use crate::loader::{filter_and_validate, LoaderError};
+use crate::loader::{LoaderError, filter_and_validate};
 use std::path::Path;
 use tracing::warn;
 

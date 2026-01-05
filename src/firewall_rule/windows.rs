@@ -21,24 +21,28 @@ impl From<&WindowsFirewallRule> for FirewallRule {
             os: Some("windows".to_string()),
             name: rule.name().to_string(),
             direction: format!("{:?}", rule.direction()),
-            enabled: rule.enabled(),
+            enabled: *rule.enabled(),
             action: format!("{:?}", rule.action()),
-            description: rule.description().map(ToString::to_string),
-            application_name: rule.application_name().map(ToString::to_string),
-            service_name: rule.service_name().map(ToString::to_string),
+            description: rule.description().as_deref().map(ToString::to_string),
+            application_name: rule.application_name().as_deref().map(ToString::to_string),
+            service_name: rule.service_name().as_deref().map(ToString::to_string),
             protocol: rule.protocol().map(|p| format!("{p:?}")),
-            local_ports: rule.local_ports().cloned(),
-            remote_ports: rule.remote_ports().cloned(),
-            local_addresses: rule.local_addresses().cloned(),
-            remote_addresses: rule.remote_addresses().cloned(),
-            icmp_types_and_codes: rule.icmp_types_and_codes().map(ToString::to_string),
-            interfaces: rule.interfaces().cloned(),
+            local_ports: rule.local_ports().clone(),
+            remote_ports: rule.remote_ports().clone(),
+            local_addresses: rule.local_addresses().clone(),
+            remote_addresses: rule.remote_addresses().clone(),
+            icmp_types_and_codes: rule
+                .icmp_types_and_codes()
+                .as_deref()
+                .map(ToString::to_string),
+            interfaces: rule.interfaces().clone(),
             interface_types: rule
                 .interface_types()
+                .clone()
                 .map(|set| set.iter().map(|i| format!("{i:?}")).collect()),
-            grouping: rule.grouping().map(ToString::to_string),
+            grouping: rule.grouping().as_deref().map(ToString::to_string),
             profiles: rule.profiles().map(|p| format!("{p:?}")),
-            edge_traversal: rule.edge_traversal(),
+            edge_traversal: *rule.edge_traversal(),
         }
     }
 }

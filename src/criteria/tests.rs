@@ -67,9 +67,11 @@ mod criteria {
             operator: None,
         });
         let errors = validate_criteria_expr(&expr, "root");
-        assert!(errors
-            .iter()
-            .any(|e| e.contains("must be a list of 2 numbers")));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("must be a list of 2 numbers"))
+        );
         let expr = CriteriaExpr::Condition(CriteriaCondition {
             field: "name".to_string(),
             operator_raw: "is_null".to_string(),
