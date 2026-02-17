@@ -36,7 +36,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["fmt"] }
 
 [target.'cfg(windows)'.dependencies]
-windows_firewall = "0.5.0"
+windows_firewall = "0.6.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
