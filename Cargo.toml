@@ -1,7 +1,7 @@
 [package]
 name = "firewall_audit"
 authors = ["lhenry-dev <lhenry.dev1@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.88"
 description = "Cross-platform firewall audit tool (YAML/JSON rules, CSV/HTML/JSON export)"
